@@ -1,11 +1,11 @@
 #include <QGuiApplication>
-#include "openglwidget.h"
+#include "OpenGLWidget.h"
 #include <iostream>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cuda_runtime.h>
 
-const static float INCREMENT=0.01;
-const static float ZOOM = 1;
+const static float INCREMENT=0.1;
+const static float ZOOM = 10;
 OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidget(_format,_parent){
     // set this widget to have the initial keyboard focus
     setFocus();
@@ -37,7 +37,7 @@ void OpenGLWidget::initializeGL(){
     m_modelMatrix = glm::mat4(1.0);
 
     // Initialize the camera
-    m_cam = new Camera(glm::vec3(0.0, 0.0, 5.0));
+    m_cam = new Camera(glm::vec3(0.0, 20.0, 50.0));
 
     m_oceanGrid = new OceanGrid(256, 1000, 1000);
 
@@ -68,7 +68,7 @@ void OpenGLWidget::paintGL(){
     m_mouseGlobalTX[3][2] = m_modelPos.z;
     m_modelMatrix = m_mouseGlobalTX;
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_oceanGrid->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_oceanGrid->render();
 }

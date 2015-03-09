@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <sys/time.h>
+#include <cuda_runtime.h>
 double startTime = 0.0;
 //----------------------------------------------------------------------------------------------------------------------
 OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
@@ -37,65 +38,61 @@ void OceanGrid::createShader(){
     GLuint KsLoc = m_shaderProgram->getUniformLoc("Ks");
     GLuint shininessLoc = m_shaderProgram->getUniformLoc("shininess");
 
-    glUniform4f(lightPosLoc, 0.0, 5.0, 0.0, 1.0);
-    glUniform3f(lightIntLoc, 0.5, 0.5, 0.5);
+    glUniform4f(lightPosLoc, 0.0, 20.0, 10.0, 1.0);
+    glUniform3f(lightIntLoc, 1.0, 1.0, 1.0);
     glUniform3f(KdLoc, 0.5, 0.5, 0.5);
     glUniform3f(KaLoc, 0.5, 0.5, 0.5);
     glUniform3f(KsLoc, 0.5, 0.5, 0.5);
-    glUniform1f(shininessLoc, 100.0);
+    glUniform1f(shininessLoc, 1000.0);
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OceanGrid::initialise(){
     int width = m_width;
     int depth = m_depth;
     int resolution = m_resolution;
+    std::vector<glm::vec3> normals;
 
     // calculate the deltas for the x,z values of our point
-    float wStep=width/(float)resolution;
-    float dStep=depth/(float)resolution;
+    float wStep=(float)width/(float)resolution;
+    float dStep=(float)depth/(float)resolution;
     // now we assume that the grid is centered at 0,0,0 so we make
     // it flow from -w/2 -d/2
-    float xPos=-(width/2.0)+(width/(resolution*2));
-    float zPos=-(depth/2.0)+(depth/(resolution*2));
+    float xPos=-((float)width/2.0);
+    float zPos=-((float)depth/2.0);
     // now loop from top left to bottom right and generate points
 
     // Sourced form Jon Macey's NGL library
-    for(int z=0; z<=resolution-1; ++z)
+    for(int z=0; z<resolution; z++)
     {
-      for(int x=0; x<=resolution; ++x)
+      for(int x=0; x<resolution; x++)
       {
         // grab the colour and use for the Y (height) only use the red channel
         m_gridVerts.push_back(glm::vec2(xPos,zPos));
         m_gridHeights.push_back(0.0);
+        normals.push_back(glm::vec3(0.0, 0.0, 0.0));
         // calculate the new position
         xPos+=wStep;
       }
       // now increment to next z row
       zPos+=dStep;
       // we need to re-set the xpos for new row
-      xPos=-(width/2.0)+(width/(resolution*2));
+      xPos=-((float)width/2.0);
     }
 
-    std::vector <GLuint> indices;
-    // some unique index value to indicate we have finished with a row and
-    // want to draw a new one
-    GLuint restartFlag=resolution*resolution+9999;
-
-
-    for(int z=0; z<resolution-1; ++z)
-    {
-      for(int x=0; x<resolution; ++x)
-      {
-        // Vertex in actual row
-        indices.push_back(z  * (resolution+1) + x);
-        // Vertex row below
-        indices.push_back((z + 1) * (resolution+1) + x);
-
-      }
-      // now we have a row of tri strips signal a re-start
-      indices.push_back(restartFlag);
+    int res = m_resolution;
+    unsigned int num_tris = (res-1)*(res-1)*2;
+    GLuint *tris = new GLuint[num_tris*3];
+    int i, j, fidx = 0;
+    for (i=0; i < res - 1; ++i) {
+        for (j=0; j < res - 1; ++j) {
+            tris[fidx*3+0] = i*res+j; tris[fidx*3+1] = i*res+j+1; tris[fidx*3+2] = (i+1)*res+j;
+            fidx++;
+            tris[fidx*3+0] = i*res+j+1; tris[fidx*3+1] = (i+1)*res+j+1; tris[fidx*3+2] = (i+1)*res+j;
+            fidx++;
+        }
     }
-    m_vertSize = indices.size();
+
+    m_vertSize = 3*num_tris;
 
     // Create our VAO and vertex buffers
     glGenVertexArrays(1, &m_VAO);
@@ -107,22 +104,32 @@ void OceanGrid::initialise(){
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
+    glGenBuffers(1, &m_VBOnormals);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBOnormals);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), &normals[0], GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&m_resourceNormal, m_VBOnormals, cudaGraphicsRegisterFlagsNone));
+
     // and one for the index values
     GLuint iboID;
     glGenBuffers(1, &iboID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLuint),&indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3*num_tris*sizeof(GLuint),tris, GL_STATIC_DRAW);
 
     glGenBuffers(1, &m_VBOheights);
     glBindBuffer(GL_ARRAY_BUFFER, m_VBOheights);
     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*m_gridVerts.size(), &m_gridHeights[0], GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, 0, 0);
+    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&m_resourceHeight, m_VBOheights, cudaGraphicsRegisterFlagsNone));
 
-    registerGLBuffer(m_VBOheights);
+    glGenBuffers(1, &m_VBOcolours);
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBOcolours);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*m_gridVerts.size(), &m_gridHeights[0], GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, 0);
 
-    glEnable(GL_PRIMITIVE_RESTART);
-    glPrimitiveRestartIndex(restartFlag);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     // Set the start time
@@ -147,18 +154,38 @@ void OceanGrid::loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatr
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(_projectionMatrix));
     glUniformMatrix4fv(modelViewProjectionLoc, 1, GL_FALSE, glm::value_ptr(modelViewProjectionMatrix));
 }
+
 void OceanGrid::update(){
     struct timeval tim;
     gettimeofday(&tim, NULL);
     double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);
-    updateHeight(now - startTime);
+
+    // Map the graphics resource
+    cudaGraphicsMapResources(1, &m_resourceHeight);
+    cudaGraphicsMapResources(1, &m_resourceNormal);
+
+    // Get a pointer to the buffer
+    float* mapPointer;
+    glm::vec3* mapPointerNormal;
+
+    size_t numBytes;
+    checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointer, &numBytes, m_resourceHeight));
+    checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointerNormal, &numBytes, m_resourceNormal));
+
+    updateGeometry(mapPointer, mapPointerNormal, now - startTime);
+
+    cudaGraphicsUnmapResources(1, &m_resourceHeight);
+    cudaGraphicsUnmapResources(1, &m_resourceNormal);
+
+    cudaThreadSynchronize();
+
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OceanGrid::render(){
     update();
     glBindVertexArray(m_VAO);
     glPointSize(10.0);
-    glDrawElements(GL_POINTS    , m_vertSize,GL_UNSIGNED_INT,0);	// draw first object
+    glDrawElements(GL_TRIANGLES , m_vertSize,GL_UNSIGNED_INT,0);	// draw first object
     glBindVertexArray(0);
 }
 //----------------------------------------------------------------------------------------------------------------------

@@ -4,9 +4,11 @@ layout (location = 0) in vec2 vertexPosition;
 layout (location = 1) in vec3 vertexNormal;
 //layout (location = 2) in vec2 texCoord;
 layout (location = 4) in float vertexHeight;
+layout (location = 5) in float vertexColours;
 
 out vec3 position;
 out vec3 normal;
+out vec3 colour;
 
 //out vec2 TexCoords;
 
@@ -18,6 +20,7 @@ uniform mat4 modelViewProjectionMatrix;
 
 void main(){
    //TexCoords = texCoord;
+   colour = vec3(vertexColours);
    normal = normalize(normalMatrix * vertexNormal);
    position = vec3(modelViewMatrix * vec4(vertexPosition.x, vertexHeight, vertexPosition.y, 1.0));
    gl_Position = modelViewProjectionMatrix * vec4(vertexPosition.x, vertexHeight, vertexPosition.y,1.0);

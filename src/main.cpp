@@ -11,18 +11,9 @@ int main(int argc, char **argv)
     float *gpuFloatArray;
     cudaMalloc(&gpuFloatArray, 128*sizeof(float));
 
-//    fillGPUArray(gpuFloatArray, 128);
-
-//    float floats[128];
-//    cudaMemcpy(floats, gpuFloatArray, 128*sizeof(float), cudaMemcpyDeviceToHost);
-
-//    for (int i=0; i<128; i++){
-//        std::cout<<floats[i]<<std::endl;
-//    }
-
     QApplication app(argc,argv);
     MainWindow w;
-    w.setWindowTitle(QString("Path Tracer"));
+    w.setWindowTitle(QString("Ocean Surface"));
     w.show();
     app.exec();
 }

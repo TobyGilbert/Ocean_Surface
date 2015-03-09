@@ -5,6 +5,9 @@
 #include <glm/glm.hpp>
 
 #include <ShaderProgram.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <cuda_gl_interop.h>
 
 class OceanGrid{
 public:
@@ -85,6 +88,19 @@ private:
     //----------------------------------------------------------------------------------------------------------------------
     GLuint m_VBOheights;
     //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A buffer to store the colours of the points on the grid
+    //----------------------------------------------------------------------------------------------------------------------
+    GLuint m_VBOcolours;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A buffer to store the normals of the points on the grid
+    //----------------------------------------------------------------------------------------------------------------------
+    GLuint m_VBOnormals;
+    //----------------------------------------------------------------------------------------------------------------------
+//    cudaGraphicsResource_t m_res;
+    cudaGraphicsResource_t m_resourceHeight;
+    cudaGraphicsResource_t m_resourceNormal;
+
 };
+
 
 #endif

@@ -15,6 +15,7 @@
 #include "ModelLoader.h"
 #include "OceanGrid.h"
 
+
 class OpenGLWidget : public QGLWidget
 {
     Q_OBJECT //must include to gain access to qt stuff
@@ -67,6 +68,7 @@ public:
     //----------------------------------------------------------------------------------------------------------------------
     void wheelEvent(QWheelEvent *_event);
     //----------------------------------------------------------------------------------------------------------------------
+    void testing(std::string _st);
 private:
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Our Camera

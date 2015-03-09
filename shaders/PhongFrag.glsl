@@ -18,6 +18,7 @@ uniform float shininess;
 uniform sampler2D tex;
 
 out vec4 fragColour;
+in vec3 colour;
 
 vec3 ads(){
    vec3 n = normalize(normal);
@@ -29,5 +30,5 @@ vec3 ads(){
 }
 
 void  main(){
-   fragColour = vec4(ads(),1.0) * vec4(0.0, 0.0, 1.0, 1.0);// * texture(tex, TexCoords);
+   fragColour = vec4(ads(),1.0)* vec4(0.0, 0.0, 1.0, 1.0);
 }
