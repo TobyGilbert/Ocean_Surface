@@ -34,6 +34,13 @@ public:
     void render();
     //----------------------------------------------------------------------------------------------------------------------
     void update();
+    inline GLuint* getReflectTex(){return &m_reflectTex;}
+    void setReflectionTexture(GLuint _texHandle);
+    void loadCubeMap(std::string _pathToFile, GLint _activeTexture);
+    void moveSunLeft();
+    void moveSunRight();
+    void moveSunUp();
+    void moveSunDown();
 private:
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Create the shader used to draw the grid
@@ -42,7 +49,7 @@ private:
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Stores the verticies of the grid
     //----------------------------------------------------------------------------------------------------------------------
-    std::vector<glm::vec2> m_gridVerts;
+    std::vector<glm::vec3> m_gridVerts;
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Stores the height of the vertices on the grid
     //----------------------------------------------------------------------------------------------------------------------
@@ -84,21 +91,41 @@ private:
     //----------------------------------------------------------------------------------------------------------------------
     int m_depth;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief A buffer to store the heights of the points on the grid
-    //----------------------------------------------------------------------------------------------------------------------
-    GLuint m_VBOheights;
-    //----------------------------------------------------------------------------------------------------------------------
     /// @brief A buffer to store the colours of the points on the grid
     //----------------------------------------------------------------------------------------------------------------------
-    GLuint m_VBOcolours;
+    GLuint m_VBOHt;
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief A buffer to store the normals of the points on the grid
     //----------------------------------------------------------------------------------------------------------------------
     GLuint m_VBOnormals;
     //----------------------------------------------------------------------------------------------------------------------
-//    cudaGraphicsResource_t m_res;
     cudaGraphicsResource_t m_resourceHeight;
     cudaGraphicsResource_t m_resourceNormal;
+    cudaGraphicsResource_t m_resourceWaves;
+    cudaGraphicsResource_t m_resourceHt;
+    cudaGraphicsResource_t m_resourceH0;
+    cudaGraphicsResource_t m_resourceColour;
+    cudaGraphicsResource_t m_resourcePosition;
+
+    GLuint m_VBOposition;
+    void createH0();
+    float phillips(glm::vec2 k);
+
+    GLuint m_VBOwaves;
+    GLuint m_VBOcolour;
+    GLuint m_VBOh0;
+    float gauss();
+    glm::vec2 m_windSpeed;
+    float m_l;
+    float m_L;
+    float m_A;
+
+    GLuint m_reflectTex;
+    GLuint m_reflectLoc;
+
+    glm::vec3 m_sunPos;
+    GLuint m_sunDirectionLoc;
+
 
 };
 

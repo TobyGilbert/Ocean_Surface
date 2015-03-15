@@ -6,7 +6,7 @@ Camera::Camera(glm::vec3 _pos){
    m_fov = 45.0;
    m_aspect = 720.0/576.0;
    m_projectionMatrix = glm::perspective(m_fov, m_aspect, 0.1f, 10000.0f);
-   lookAt(m_position, glm::vec3(0.0, 0.0, 0.0), m_up);
+   lookAt(m_position, glm::vec3(0.0, 20.0, 0.0), m_up);
 }
 
 Camera::~Camera(){

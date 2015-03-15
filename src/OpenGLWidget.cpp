@@ -5,10 +5,11 @@
 #include <cuda_runtime.h>
 
 const static float INCREMENT=0.1;
-const static float ZOOM = 10;
+const static float ZOOM = 50;
 OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidget(_format,_parent){
     // set this widget to have the initial keyboard focus
     setFocus();
+    setFocusPolicy(Qt::StrongFocus);
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     m_rotate=false;
     // mouse rotation values set to 0
@@ -21,6 +22,7 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
 OpenGLWidget::~OpenGLWidget(){
     delete m_cam;
     delete m_oceanGrid;
+    delete m_skybox;
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::initializeGL(){
@@ -37,11 +39,31 @@ void OpenGLWidget::initializeGL(){
     m_modelMatrix = glm::mat4(1.0);
 
     // Initialize the camera
-    m_cam = new Camera(glm::vec3(0.0, 20.0, 50.0));
+    m_cam = new Camera(glm::vec3(0.0, 50.0, 50.0));
 
     m_oceanGrid = new OceanGrid(256, 1000, 1000);
 
+    m_skybox = new Skybox();
+
+    genFBOs();
+
     startTimer(0);
+
+}
+void OpenGLWidget::genFBOs(){
+    // Gen framebuffer
+    glGenFramebuffers(1, &m_reflectFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_reflectFBO);
+
+    // Bind texture to FBO
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *(m_oceanGrid->getReflectTex()), 0);
+
+    // Set the targets for the fragment shader output
+    GLenum drawBufs[] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, drawBufs);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 }
 //----------------------------------------------------------------------------------------------------------------------
@@ -50,9 +72,36 @@ void OpenGLWidget::resizeGL(const int _w, const int _h){
     glViewport(0,0,_w,_h);
     m_cam->setShape(_w, _h);
 }
+void OpenGLWidget::renderReflections(){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glViewport(0, 0, 512, 512);
+
+    glm::mat4 rotx;
+    glm::mat4 roty;
+
+    rotx = glm::rotate(rotx, m_spinXFace, glm::vec3(1.0, 0.0, 0.0));
+    roty = glm::rotate(roty, m_spinYFace, glm::vec3(0.0, 1.0, 0.0));
+
+    m_mouseGlobalTX = rotx*roty;
+    // add the translations
+    m_mouseGlobalTX[3][0] = m_modelPos.x;
+    m_mouseGlobalTX[3][1] = m_modelPos.y;
+    m_mouseGlobalTX[3][2] = m_modelPos.z;
+    m_modelMatrix = m_mouseGlobalTX;
+
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5000.0, -5000.0, 5000.0));
+    m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+    m_skybox->render();
+
+}
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
+    glBindFramebuffer(GL_FRAMEBUFFER, m_reflectFBO);
+    renderReflections();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    glViewport(0, 0, width()*devicePixelRatio(), height()*devicePixelRatio());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //Initialise the model matrix
 
@@ -71,12 +120,28 @@ void OpenGLWidget::paintGL(){
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_oceanGrid->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_oceanGrid->render();
+
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5000.0, 5000.0, 5000.0));
+    m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+    m_skybox->render();
 }
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::keyPressEvent(QKeyEvent *_event){
     switch(_event->key()){
         case Qt::Key_Escape:
             QGuiApplication::exit();
+            break;
+        case Qt::Key_Left:
+            m_oceanGrid->moveSunLeft();
+            break;
+        case Qt::Key_Right:
+            m_oceanGrid->moveSunRight();
+            break;
+        case Qt::Key_Up:
+            m_oceanGrid->moveSunUp();
+            break;
+        case Qt::Key_Down:
+            m_oceanGrid->moveSunDown();
             break;
     }
 }

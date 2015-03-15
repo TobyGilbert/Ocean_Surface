@@ -28,7 +28,8 @@ SOURCES += \
     src/Shader.cpp \
     src/CudaUtils.cpp \
     src/Ocean.cu \
-    src/OceanGrid.cpp
+    src/OceanGrid.cpp \
+    src/Skybox.cpp
 
 CUDA_SOURCES += src/Ocean.cu
 SOURCES -= src/Ocean.cu
@@ -46,7 +47,8 @@ HEADERS += \
     include/Shader.h \
     include/CudaUtils.h \
     include/Ocean.h \
-    include/OceanGrid.h
+    include/OceanGrid.h \
+    include/Skybox.h
 
 # use this to suppress some warning from boost
 QMAKE_CXXFLAGS_WARN_ON += "-Wno-unused-parameter"
@@ -72,6 +74,7 @@ macx:CUDA_DIR = /Developer/NVIDIA/CUDA-6.5
 
 NVCCFLAGS = --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v
 
+INCLUDEPATH += /usr/local/include
 INCLUDEPATH +=./include /opt/local/include
 INCLUDEPATH += $$CUDA_DIR/include
 INCLUDEPATH += $$CUDA_DIR/samples/common/inc
@@ -82,7 +85,7 @@ QMAKE_LIBDIR += $$CUDA_DIR/lib
 QMAKE_LIBDIR += $$CUDA_DIR/samples/common/lib
 QMAKE_LIBDIR += /opt/local/lib
 
-LIBS += -lassimp -lcudart
+LIBS += -lassimp -lcudart -lcufftw -lcufft
 
 DESTDIR=./
 
@@ -108,5 +111,26 @@ FORMS += \
 
 OTHER_FILES += \
     shaders/PhongFrag.glsl \
-    shaders/PhongVert.glsl
+    shaders/PhongVert.glsl \
+    shaders/CubeMapVert.glsl \
+    shaders/CubeMapFrag.glsl \
+    shaders/OceanFrag.glsl \
+    shaders/OceanVert.glsl \
+    textures/skyCubeMap_negx.png \
+    textures/skyCubeMap_negy.png \
+    textures/skyCubeMap_negz.png \
+    textures/skyCubeMap_posx.png \
+    textures/skyCubeMap_posy.png \
+    textures/skyCubeMap_posz.png \
+    textures/interstellar_east.jpg \
+    textures/interstellar_north.jpg \
+    textures/interstellar_south.jpg \
+    textures/interstellar_up.jpg \
+    textures/interstellar_west.jpg \
+    textures/miramar_negx.jpg \
+    textures/miramar_negy.jpg \
+    textures/miramar_negz.jpg \
+    textures/miramar_posx.jpg \
+    textures/miramar_posy.jpg \
+    textures/miramar_posz.jpg
 
