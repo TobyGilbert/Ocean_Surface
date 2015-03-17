@@ -3,6 +3,8 @@
 #include <iostream>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cuda_runtime.h>
+#include <sys/time.h>
+
 
 const static float INCREMENT=0.1;
 const static float ZOOM = 50;
@@ -97,6 +99,12 @@ void OpenGLWidget::renderReflections(){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
+
+    struct timeval tim;
+    gettimeofday(&tim, NULL);
+    double start = tim.tv_sec+(tim.tv_usec * 1.0e-6);
+
+    updateTimer(m_oceanGrid->getTime());
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectFBO);
     renderReflections();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -124,6 +132,11 @@ void OpenGLWidget::paintGL(){
     m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5000.0, 5000.0, 5000.0));
     m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_skybox->render();
+
+    gettimeofday(&tim, NULL);
+    double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);
+
+    updateFPS(1.0 / (now - start));
 }
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::keyPressEvent(QKeyEvent *_event){
@@ -219,4 +232,9 @@ void OpenGLWidget::wheelEvent(QWheelEvent *_event){
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::timerEvent(QTimerEvent *_event){
     updateGL();
+}
+
+void OpenGLWidget::updateChoppiness(int value){
+    // 0 - 10 10  0-0.02
+    m_oceanGrid->updateChoppiness((float)value/100.0);
 }

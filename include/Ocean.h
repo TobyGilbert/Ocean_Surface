@@ -1,23 +1,78 @@
 #ifndef OCEAN_H_
 #define OCEAN_H_
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @author Toby Gilbert
+// ----------------------------------------------------------------------------------------------------------------------------------------
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <glm/glm.hpp>
-
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @brief A structure for storing attributes of a wave used in Gerstner's wave model
+// ----------------------------------------------------------------------------------------------------------------------------------------
 struct wave{
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief The frequency
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float W;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief The amplitude
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float A;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief Controls the steepness of a wave
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float Q;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief The direction
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     glm::vec2 D;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief The speed
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float S;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float L;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
+    /// @brief The phase constant
+    // ----------------------------------------------------------------------------------------------------------------------------------------
     float phaseConstant;
+    // ----------------------------------------------------------------------------------------------------------------------------------------
 };
-
-void registerHeightBuffer(GLuint _GLBuffer);
-void registerNormalBuffer(GLuint _GLBuffer);
-void updateHeight(glm::vec3* _heightPointer, float2* _position, glm::vec3 *_normal, glm::vec3 *_colour, float2* _ht, int _res, float _scale = 1000.0, glm::vec3 _cameraPos = glm::vec3(0.0, 20.0, 50.0));
-void updateGerstner(glm::vec3 *_point, glm::vec3 *_point2, wave* _waves, float _time, int _res, int _numWaves);
-void updateFFT(glm::vec2 *_h0, float2 *_ht, float _time, int _res);
-void addChoppiness(float2* ht, int _res);
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @brief Calls the Cuda kernel for updating the height and x, z displacement of the vertices in the grid
+/// @param d_position An OpenGL buffer for storing the current positions of the vertices in the grid
+/// @param d_height An OpenGL buffer which holds the new heights of grid positions
+/// @param d_normal An OpenGL buffer which holds the normals
+/// @param d_xDisplacement An OpenGL buffer for storing the displacment in the x axis
+/// @param _res The resolution of the grid
+/// @param _scale Scales the amplitude of the waves
+// ----------------------------------------------------------------------------------------------------------------------------------------
+void updateHeight(glm::vec3* d_position, float2* d_height, glm::vec3* d_normal, float2* d_xDisplacement, float _choppiness, int _res, float _scale);
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @brief Calls the Cuda kernel for caluclating vertex heights using the Gerstner wave model
+/// @param d_point
+/// @param d_point2
+/// @param d_waves An OpenGL buffer for storeing waves used in the simulation
+/// @param _time The current time of the simulation
+/// @param _res The resolution of the grid
+/// @param _numWaves The number of waves in the simulation
+// ----------------------------------------------------------------------------------------------------------------------------------------
+void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave *d_waves, float _time, int _res, int _numWaves);
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @brief Calls the Cuda kernel for calculating a field of frequency amplitudes
+/// @param d_h0 An OpenGL buffer for storing the field of frequency amplitudes a time zero
+/// @param d_ht An OpenGL buffer for outputting the the frequency field at time _time
+/// @param _time The current time in the simulation
+/// @param _res The resolution of the grid
+// ----------------------------------------------------------------------------------------------------------------------------------------
+void updateFrequencyDomain(glm::vec2 *d_h0, float2 *d_ht, float _time, int _res);
+// ----------------------------------------------------------------------------------------------------------------------------------------
+/// @brief Adds x displacement to the wave simulation using equation 29 of Tessendorf's paper
+/// @param d_ht An OpenGL buffer which holds the frequency field
+/// @brief _res The resolution of the grid
+// ----------------------------------------------------------------------------------------------------------------------------------------
+void addChoppiness(float2* d_ht, int _res);
+// ----------------------------------------------------------------------------------------------------------------------------------------
 #endif

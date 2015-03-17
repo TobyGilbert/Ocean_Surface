@@ -19,8 +19,10 @@ private:
     Ui::MainWindow *ui;
     OpenGLWidget *m_openGLWidget;
 
-
-
+public slots:
+    void choppinessValue(int _value);
+    void simulationTime(float _time);
+    void FPS(float _FPS);
 
 
 };
