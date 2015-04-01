@@ -20,7 +20,7 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     this->resize(_parent->size());
 
-    m_sunPos = glm::vec3(0.0, 0.0, 0.0);
+    m_sunPos = glm::vec3(0.0, 20.0, -500.0);
 }
 //----------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::~OpenGLWidget(){
@@ -51,6 +51,8 @@ void OpenGLWidget::initializeGL(){
     m_skybox = new Skybox();
 
     m_sun = new Sun();
+
+    m_boat = new ModelLoader("models/yacht.obj");
 
     genFBOs();
 
@@ -140,10 +142,12 @@ void OpenGLWidget::paintGL(){
     m_skybox->render();
 
     m_modelMatrix = m_mouseGlobalTX;
-    m_modelMatrix = glm::translate(m_modelMatrix, m_sunPos);
     m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(10.0, 10.0, 10.0));
+    m_modelMatrix = glm::translate(m_modelMatrix, m_sunPos);
     m_sun->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_sun->render();
+
+//    m_boat->render();
 
     gettimeofday(&tim, NULL);
     double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);

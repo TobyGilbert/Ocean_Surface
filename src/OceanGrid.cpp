@@ -17,11 +17,11 @@ OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
     m_resolution = _resolution;
     m_width = _width;
     m_depth = _depth;
-    m_windSpeed = glm::vec2(0.2, 3.0);
+    m_windSpeed = glm::vec2(0.0, 30.0);
     m_L = 1000;
-    m_l = 1 / m_L;
-    m_A = 0.03;
-    m_sunPos = glm::vec3(0.0, -0.5, 0.5);
+    m_l = 1.0 / m_L;
+    m_A = 0.05;
+    m_sunPos = glm::vec3(0.0, 20.0, -500.0);
     m_choppiness = 0.02;
     m_numLayers = 15;
     createShader();
@@ -81,7 +81,7 @@ void OceanGrid::createShader(){
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-
+// ----------------------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createPerlinTexture(int _activeTexture){
     // Create a noise texture used to hide tiling of ocean
     // Noise texture generation taken from chapter 8 of GLSL Cookbook 4.0
@@ -223,14 +223,6 @@ void OceanGrid::createGrid(){
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     checkCudaErrors(cudaGraphicsGLRegisterBuffer(&m_resourceVerts, m_VBOverts, cudaGraphicsRegisterFlagsNone));
-
-    // Normals
-    glGenBuffers(1, &m_VBOnormals);
-    glBindBuffer(GL_ARRAY_BUFFER, m_VBOnormals);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3)*normals.size(), &normals[0], GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&m_resourceNormals, m_VBOnormals, cudaGraphicsRegisterFlagsNone));
 
     // Indices
     GLuint iboID;
@@ -397,18 +389,15 @@ void OceanGrid::update(){
 
     // Map the graphics resources
     checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceVerts));
-    checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceNormals));
     checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceHeightMap));
 
     // Get pointers to the buffers
     glm::vec3* mapPointerVerts;
-    glm::vec3* mapPointerNormals;
     cudaArray* cudaArrayHeightMap;
 
     size_t numBytes;
 
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointerVerts, &numBytes, m_resourceVerts));
-    checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointerNormals, &numBytes, m_resourceNormals));
     checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&cudaArrayHeightMap, m_resourceHeightMap, 0, 0));
 
     cudaResourceDesc viewCudaArrayResourceDesc;
@@ -433,14 +422,11 @@ void OceanGrid::update(){
     cufftExecC2C(m_fftPlan, (float2*)d_Ht, (float2*)d_Ht, CUFFT_INVERSE);
 
     // Updates the vertex heights
-    updateHeight(mapPointerVerts, viewCudaSurfaceObject, (float2*)d_Heights, mapPointerNormals, (float2*)d_Ht, m_choppiness, m_resolution, 50000);
+    updateHeight(mapPointerVerts, viewCudaSurfaceObject, (float2*)d_Heights, (float2*)d_Ht, m_choppiness, m_resolution, 50000);
 
     // Unmap the cuda graphics resources
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceVerts));
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceNormals));
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceHeightMap));
-
-    cudaStreamSynchronize(0);
 
     // Syncronise our threads
     cudaThreadSynchronize();
@@ -485,3 +471,4 @@ void OceanGrid::moveSunUp(){
 void OceanGrid::updateChoppiness(float _choppiness){
     m_choppiness = _choppiness;
 }
+// ----------------------------------------------------------------------------------------------------------------------------------------

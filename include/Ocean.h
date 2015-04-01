@@ -49,7 +49,7 @@ struct wave{
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, glm::vec3* d_normal, float2* d_xDisplacement, float _choppiness, int _res, float _scale);
+void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2* d_xDisplacement, float _choppiness, int _res, float _scale);
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Calls the Cuda kernel for caluclating vertex heights using the Gerstner wave model
 /// @param d_point

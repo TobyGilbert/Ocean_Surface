@@ -17,10 +17,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     this->setMinimumWidth(1000);
     ui->choppinessSlider->setMinimum(0);
-    ui->choppinessSlider->setSliderPosition(2);
-    ui->choppinessSlider->setMaximum(10);
+    ui->choppinessSlider->setSliderPosition(5);
+    ui->choppinessSlider->setMaximum(100);
 
-    ui->lineEdit->setText("0.02");
+    ui->lineEdit->setText("0.05");
 
     ui->timeLineEdit->setReadOnly(true);
 

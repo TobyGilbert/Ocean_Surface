@@ -57,7 +57,12 @@ vec3 specular(){
    vec3 v = normalize(vec3(-position));
    vec3 r = reflect(-s, n);
    vec3 h = normalize(v + s);
-   return vec3((pow(max(dot(h, n), 0.0), 400.0)));
+   return vec3((pow(max(dot(h, n), 0.0), 100.0)));
+}
+// Sun streak referenced from https://www.shadertoy.com/view/4dl3zr
+vec3 sunStreak(){
+  vec3 r = normalize(reflect(normalMatrix* -sun.position, normal));
+  return vec3((0.8 * pow(max(0.0, dot(r, normalize(-position.xyz))), 200.0)));
 }
 
 void main(){
@@ -75,7 +80,8 @@ void main(){
   vec3 distance = (position.xyz - cameraPosition.xyz);
   float attenuation = max(1.0 - dot(distance,distance) * 0.001, 0.0);
   colour += seaTopCol * (position.z -  0.6) * 0.18 * attenuation;
-  colour += specular();
+//  colour += specular();
+  colour += sunStreak();
 
 //  fragColour = vec4(vec3(dist), 1.0);
   fragColour =vec4(vec3(colour), 1.0);

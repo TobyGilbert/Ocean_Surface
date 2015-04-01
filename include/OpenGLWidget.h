@@ -148,7 +148,7 @@ private:
 
     glm::vec3 m_sunPos;
 
-
+    ModelLoader *m_boat;
 
 public slots:
     void updateChoppiness(int value);

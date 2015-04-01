@@ -131,7 +131,7 @@ __global__ void frequencyDomain(glm::vec2* d_h0Pointer, float2* d_htPointer, flo
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, glm::vec3* d_normal, float2* d_xDisplacement, float _choppiness, int _res, float _scale){
+__global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2* d_xDisplacement, float _choppiness, int _res, float _scale){
     // A vertex on the grid
     int u = int(threadIdx.x - (_res * floor(double(threadIdx.x / _res))));
     int v = int((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res)));
@@ -150,36 +150,6 @@ __global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, floa
         printf("%f\n", (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign);
     }
     d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x += (d_xDisplacement[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * _choppiness * sign;
-
-    // Calculate our vertex normals
-    glm::vec3 norm;
-    float nL, nR, nU, nD;
-    // TODO remove branching conditions
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) >=1)
-        nL = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - 1].x/_scale) * sign;
-    else
-        nL = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= _res*_res - 1)
-        nR = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + 1].x/_scale) * sign;
-    else
-        nR = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res)
-        nU = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - _res].x/_scale) * sign;
-    else
-        nU = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <=_res*_res - _res)
-        nD = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + _res].x/_scale) * sign;
-    else
-        nD = 0.0;
-    norm.x = nL - nR;
-    norm.y = 10.0;
-    norm.z = nD - nU;
-    norm.x = norm.x /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);
-    norm.y = norm.y /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);
-    norm.z = norm.z /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);
-
-    // Update the normals buffer
-    d_normal[(blockIdx.x * blockDim.x) + threadIdx.x] = norm;
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Create x displacement in in the frequency domain
@@ -215,13 +185,13 @@ void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave 
     gerstner<<<numBlocks, 1024>>>(d_heightPointer, d_normalPointer, d_waves,  _time, _res, _numWaves);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, glm::vec3* d_normal, float2 *d_xDisplacement, float _choppiness, int _res, float _scale){
+void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2 *d_xDisplacement, float _choppiness, int _res, float _scale){
 
     // Bind the cudaArray to a globally scoped CUDA surface
 //    cudaBindSurfaceToArray(_surface, d_heightsCudaArray);
 
     int numBlocks =( _res * _res )/ 1024;
-    height<<<numBlocks, 1024>>>(d_position, _surface, d_height, d_normal, d_xDisplacement, _choppiness,  _res, _scale);
+    height<<<numBlocks, 1024>>>(d_position, _surface, d_height, d_xDisplacement, _choppiness,  _res, _scale);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void addChoppiness(float2* d_ht, int _res){
