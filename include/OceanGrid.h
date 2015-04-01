@@ -79,6 +79,10 @@ public:
     inline float getTime(){return m_time;}
 
     void setSunPos(glm::vec3 _sunPos){m_sunPos = _sunPos;}
+
+    void setWindSpeedX(double _x){m_windSpeed.x = _x;}
+    void setWindSpeedY(double _y){m_windSpeed.y = _y;} 
+    void resetSim();
 private:
     // ----------------------------------------------------------------------------------------------------------------------------------------
     /// @brief Creates a set of frequencies at time zero for use with FFT waves

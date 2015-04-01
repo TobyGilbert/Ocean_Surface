@@ -19,13 +19,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->choppinessSlider->setMinimum(0);
     ui->choppinessSlider->setSliderPosition(5);
     ui->choppinessSlider->setMaximum(100);
-
     ui->lineEdit->setText("0.05");
 
     ui->timeLineEdit->setReadOnly(true);
 
     ui->FPSLineEdit->setReadOnly(true);
 
+    ui->doubleSpinBox->setValue(1.0);
+    ui->doubleSpinBox_2->setValue(1.0);
+
+
+    connect(ui->doubleSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(updateWindSpeedX(double)));
+    connect(ui->doubleSpinBox, SIGNAL(editingFinished()), m_openGLWidget, SLOT(resetSim()));
+    connect(ui->doubleSpinBox_2, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(updateWindSpeedY(double)));
+    connect(ui->doubleSpinBox_2, SIGNAL(editingFinished()), m_openGLWidget, SLOT(resetSim()));
     connect(ui->choppinessSlider, SIGNAL(sliderMoved(int)), m_openGLWidget, SLOT(updateChoppiness(int)));
     connect(ui->choppinessSlider, SIGNAL(sliderMoved(int)), this, SLOT(choppinessValue(int)));
     connect(m_openGLWidget, SIGNAL(updateTimer(float)), this, SLOT(simulationTime(float)));

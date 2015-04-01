@@ -17,7 +17,7 @@ OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
     m_resolution = _resolution;
     m_width = _width;
     m_depth = _depth;
-    m_windSpeed = glm::vec2(0.0, 30.0);
+    m_windSpeed = glm::vec2(1.0, 1.0);
     m_L = 1000;
     m_l = 1.0 / m_L;
     m_A = 0.05;
@@ -241,8 +241,8 @@ float OceanGrid::phillips(glm::vec2 _k){
 
     float ph = ( (exp( (-1 / ( (kLen * m_L )*(kLen * m_L ) )))) / pow(kLen, 4) );
     ph *= m_A;
-    ph *= (glm::normalize(_k).x * glm::normalize(m_windSpeed).x + glm::normalize(_k).y * glm::normalize(m_windSpeed).y)
-            * (glm::normalize(_k).x * glm::normalize(m_windSpeed).x + glm::normalize(_k).y * glm::normalize(m_windSpeed).y);
+    ph *= (glm::normalize(_k).x * m_windSpeed.x + glm::normalize(_k).y * m_windSpeed.y)
+            * (glm::normalize(_k).x * m_windSpeed.x + glm::normalize(_k).y * m_windSpeed.y);
     ph *= exp(-kLen * -kLen * m_l * m_l);
 
     return ph;
@@ -264,7 +264,6 @@ float OceanGrid::gauss(){
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createH0(){
-    std::vector<glm::vec2> h0;
     glm::vec2* h_H0;
 
     // Assign memory on the host side and device to store h0 and evaluate
@@ -283,7 +282,6 @@ void OceanGrid::createH0(){
             if (h != h ){
                 std::cout<<"hx: "<<h.x<<" hy: "<<h.y<<"m: "<<m<<"n: "<<n<<std::endl;
             }
-            h0.push_back(h);
             h_H0[((n+(m_resolution/2)) + ((m+(m_resolution/2)) * m_resolution))] = h;
         }
     }
@@ -472,3 +470,6 @@ void OceanGrid::updateChoppiness(float _choppiness){
     m_choppiness = _choppiness;
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
+void OceanGrid::resetSim(){
+    createH0();
+}

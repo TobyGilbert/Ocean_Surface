@@ -258,3 +258,13 @@ void OpenGLWidget::updateChoppiness(int value){
     // 0 - 10 10  0-0.02
     m_oceanGrid->updateChoppiness((float)value/100.0);
 }
+
+void OpenGLWidget::updateWindSpeedX(double _x){
+    m_oceanGrid->setWindSpeedX(_x);
+}
+void OpenGLWidget::updateWindSpeedY(double _y){
+    m_oceanGrid->setWindSpeedY(_y);
+}
+void OpenGLWidget::resetSim(){
+    m_oceanGrid->resetSim();
+}

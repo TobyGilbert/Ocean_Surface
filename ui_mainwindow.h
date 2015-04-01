@@ -13,6 +13,7 @@
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHeaderView>
@@ -42,10 +43,15 @@ public:
     QLabel *label;
     QLineEdit *lineEdit;
     QSlider *choppinessSlider;
+    QLabel *label_5;
+    QLabel *label_4;
     QLabel *label_3;
     QSpacerItem *verticalSpacer;
     QLabel *label_2;
+    QDoubleSpinBox *doubleSpinBox;
     QLineEdit *FPSLineEdit;
+    QDoubleSpinBox *doubleSpinBox_2;
+    QLabel *label_6;
     QWidget *tab_2;
     QSpacerItem *horizontalSpacer;
     QMenuBar *menubar;
@@ -92,6 +98,16 @@ public:
 
         gridLayout_3->addWidget(choppinessSlider, 3, 0, 1, 1);
 
+        label_5 = new QLabel(tab);
+        label_5->setObjectName(QStringLiteral("label_5"));
+
+        gridLayout_3->addWidget(label_5, 5, 2, 1, 1);
+
+        label_4 = new QLabel(tab);
+        label_4->setObjectName(QStringLiteral("label_4"));
+
+        gridLayout_3->addWidget(label_4, 5, 0, 1, 1);
+
         label_3 = new QLabel(tab);
         label_3->setObjectName(QStringLiteral("label_3"));
 
@@ -99,17 +115,32 @@ public:
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-        gridLayout_3->addItem(verticalSpacer, 4, 0, 1, 1);
+        gridLayout_3->addItem(verticalSpacer, 6, 0, 1, 1);
 
         label_2 = new QLabel(tab);
         label_2->setObjectName(QStringLiteral("label_2"));
 
         gridLayout_3->addWidget(label_2, 2, 0, 1, 1);
 
+        doubleSpinBox = new QDoubleSpinBox(tab);
+        doubleSpinBox->setObjectName(QStringLiteral("doubleSpinBox"));
+
+        gridLayout_3->addWidget(doubleSpinBox, 5, 1, 1, 1);
+
         FPSLineEdit = new QLineEdit(tab);
         FPSLineEdit->setObjectName(QStringLiteral("FPSLineEdit"));
 
         gridLayout_3->addWidget(FPSLineEdit, 0, 3, 1, 1);
+
+        doubleSpinBox_2 = new QDoubleSpinBox(tab);
+        doubleSpinBox_2->setObjectName(QStringLiteral("doubleSpinBox_2"));
+
+        gridLayout_3->addWidget(doubleSpinBox_2, 5, 3, 1, 1);
+
+        label_6 = new QLabel(tab);
+        label_6->setObjectName(QStringLiteral("label_6"));
+
+        gridLayout_3->addWidget(label_6, 4, 0, 1, 1);
 
         tabWidget->addTab(tab, QString());
         tab_2 = new QWidget();
@@ -147,8 +178,11 @@ public:
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0));
         groupBox->setTitle(QApplication::translate("MainWindow", "Controls", 0));
         label->setText(QApplication::translate("MainWindow", "Time", 0));
+        label_5->setText(QApplication::translate("MainWindow", "y:", 0));
+        label_4->setText(QApplication::translate("MainWindow", "x:", 0));
         label_3->setText(QApplication::translate("MainWindow", "FPS", 0));
         label_2->setText(QApplication::translate("MainWindow", "Choppiness", 0));
+        label_6->setText(QApplication::translate("MainWindow", "Wind Speed", 0));
         tabWidget->setTabText(tabWidget->indexOf(tab), QApplication::translate("MainWindow", "FFT", 0));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QApplication::translate("MainWindow", "Gerstner", 0));
     } // retranslateUi

@@ -152,6 +152,9 @@ private:
 
 public slots:
     void updateChoppiness(int value);
+    void updateWindSpeedX(double _x);
+    void updateWindSpeedY(double _y);
+    void resetSim();
 signals:
     void updateTimer(float _time);
     void updateFPS(float _FPS);
