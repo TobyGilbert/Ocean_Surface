@@ -4,6 +4,8 @@
 #include <cuda_runtime.h>
 #include "Ocean.h"
 
+#define FULL_SCREEN
+
 int main(int argc, char **argv)
 {
     CudaUtils::printDevices();
@@ -14,6 +16,10 @@ int main(int argc, char **argv)
     QApplication app(argc,argv);
     MainWindow w;
     w.setWindowTitle(QString("Ocean Surface"));
+#ifdef FULL_SCREEN
+        w.showMaximized();
+#endif
+
     w.show();
     app.exec();
 }

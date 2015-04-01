@@ -7,6 +7,11 @@
 #include <glm/glm.hpp>
 #include <thrust/complex.h>
 #include <curand.h>
+#include <helper_cuda_gl.h>
+#include <helper_functions.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include <surface_functions.h>
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Uses Gerstner's equation for generating waves on a regular grid
 /// @param d_heightPointer An OpenGL buffer for storing the position information for the vertices on the grid
@@ -15,6 +20,7 @@
 /// @param _time The current simulatation time
 /// @param _res The resolution of the simulation grid
 /// @param _numWaves The number of waves in the simulation
+// ----------------------------------------------------------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------------------------------------------------------
 __global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave* d_wavesPointer,float _time, int _res, int _numWaves){
 
@@ -125,17 +131,21 @@ __global__ void frequencyDomain(glm::vec2* d_h0Pointer, float2* d_htPointer, flo
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void height(glm::vec3* d_position, float2* d_height, glm::vec3* d_normal, float2* d_xDisplacement, float _choppiness, int _res, float _scale){
+__global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, glm::vec3* d_normal, float2* d_xDisplacement, float _choppiness, int _res, float _scale){
     // A vertex on the grid
-    int u = int((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))));
-    int v = (int)((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res)) );
+    int u = int(threadIdx.x - (_res * floor(double(threadIdx.x / _res))));
+    int v = int((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res)));
+
+
     // Sign correction - Unsure why this is needed
     float sign = 1.0;
     if ((u+v) % 2 != 0){
         sign = -1.0;
     }
     // Update the heights of the vertices and add x and z displacement
-    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ;
+//    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ;
+    surf2Dwrite(make_uchar4((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign + 100.0, 0, 0, 255), _surface, (int)sizeof(uchar4)*u, v, cudaBoundaryModeZero);
+
     if ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign > 80){
         printf("%f\n", (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign);
     }
@@ -205,9 +215,13 @@ void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave 
     gerstner<<<numBlocks, 1024>>>(d_heightPointer, d_normalPointer, d_waves,  _time, _res, _numWaves);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateHeight(glm::vec3* d_position, float2* d_height, glm::vec3* d_normal, float2 *d_xDisplacement, float _choppiness, int _res, float _scale){
+void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, glm::vec3* d_normal, float2 *d_xDisplacement, float _choppiness, int _res, float _scale){
+
+    // Bind the cudaArray to a globally scoped CUDA surface
+//    cudaBindSurfaceToArray(_surface, d_heightsCudaArray);
+
     int numBlocks =( _res * _res )/ 1024;
-    height<<<numBlocks, 1024>>>(d_position, d_height, d_normal, d_xDisplacement, _choppiness,  _res, _scale);
+    height<<<numBlocks, 1024>>>(d_position, _surface, d_height, d_normal, d_xDisplacement, _choppiness,  _res, _scale);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void addChoppiness(float2* d_ht, int _res){

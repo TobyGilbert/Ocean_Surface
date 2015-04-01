@@ -55,7 +55,6 @@ void OpenGLWidget::initializeGL(){
     genFBOs();
 
     startTimer(0);
-
 }
 void OpenGLWidget::genFBOs(){
     // Gen framebuffer
@@ -71,7 +70,6 @@ void OpenGLWidget::genFBOs(){
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::resizeGL(const int _w, const int _h){
@@ -79,6 +77,7 @@ void OpenGLWidget::resizeGL(const int _w, const int _h){
     glViewport(0,0,_w,_h);
     m_cam->setShape(_w, _h);
 }
+//----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::renderReflections(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -100,7 +99,6 @@ void OpenGLWidget::renderReflections(){
     m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(50000.0, -50000.0, 50000.0));
     m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_skybox->render();
-
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
