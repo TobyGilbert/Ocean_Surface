@@ -15,6 +15,7 @@
 #include "ModelLoader.h"
 #include "OceanGrid.h"
 #include "Skybox.h"
+#include "Sun.h"
 
 
 class OpenGLWidget : public QGLWidget
@@ -141,6 +142,13 @@ private:
 
     // Framebuffer
     GLuint m_reflectFBO;
+
+    // Sun
+    Sun *m_sun;
+
+    glm::vec3 m_sunPos;
+
+
 
 public slots:
     void updateChoppiness(int value);

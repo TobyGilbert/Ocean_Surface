@@ -28,32 +28,11 @@ __global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, 
 
     float waveX = 0;
     float waveY = 0;
-    float waveZ  = 0;
+    float waveZ = 0;
     float waveL = 0;
     float waveR = 0;
-    float waveU =0;
-    float waveD= 0;
-
-    // GPU GEMS ------------------------------------------------------------------------------------------------------------------------------------------------
-
-//    for (int i=0; i<_numWaves; i++){
-//        // Calcualte the x position
-//        waveX += float((h_wavesPointer[i].Q * h_wavesPointer[i].A) * h_wavesPointer[i].D.x * cos(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u, v)) + h_wavesPointer[i].phaseConstant * time)));
-//        // Calculate the y position
-//        waveZ  += float( (h_wavesPointer[i].Q * h_wavesPointer[i].A) * h_wavesPointer[i].D.y * cos( double( h_wavesPointer[i].W * glm::dot( h_wavesPointer[i].D, glm::vec2(u, v)) + h_wavesPointer[i].phaseConstant * time  ) ) );
-//        // Calculate the z position
-//        waveY += float(h_wavesPointer[i].A * sin(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u, v)) + h_wavesPointer[i].phaseConstant * time)));
-//        // Calculate the normals
-//        waveL += float(h_wavesPointer[i].A * sin(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u-1.0, v)) + h_wavesPointer[i].phaseConstant * time)));
-//        waveR += float(h_wavesPointer[i].A * sin(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u+1.0, v)) + h_wavesPointer[i].phaseConstant * time)));
-//        waveU += float(h_wavesPointer[i].A * sin(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u, v-1.0)) + h_wavesPointer[i].phaseConstant * time)));
-//        waveD += float(h_wavesPointer[i].A * sin(double(h_wavesPointer[i].W * glm::dot(h_wavesPointer[i].D, glm::vec2(u, v+1.0)) + h_wavesPointer[i].phaseConstant * time)));
-
-//    }
-
-//    h_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].x = xPrev + waveX;
-//    h_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].y = waveY;
-//    h_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].z = zPrev + waveZ;
+    float waveU = 0;
+    float waveD = 0;
 
     // Tessendof
     for (int i=0; i<_numWaves; i++){
@@ -77,8 +56,8 @@ __global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, 
 
     glm::vec3 N;
     N.x = waveL*50 - waveR*50;
-    N.y = waveD*50 - waveU*50;
-    N.z = 2.0;
+    N.y = 1.0;
+    N.z = waveD*50 - waveU*50;
     N.x = N.x /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
     N.y = N.y /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
     N.z = N.z /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
@@ -157,8 +136,10 @@ __global__ void height(glm::vec3* d_position, float2* d_height, glm::vec3* d_nor
     }
     // Update the heights of the vertices and add x and z displacement
     d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ;
+    if ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign > 80){
+        printf("%f\n", (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign);
+    }
     d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x += (d_xDisplacement[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * _choppiness * sign;
-
 
     // Calculate our vertex normals
     glm::vec3 norm;
@@ -168,21 +149,21 @@ __global__ void height(glm::vec3* d_position, float2* d_height, glm::vec3* d_nor
         nL = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - 1].x/_scale) * sign;
     else
         nL = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= 65535)
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= _res*_res - 1)
         nR = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + 1].x/_scale) * sign;
     else
         nR = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= 256)
-        nU = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - 256].x/_scale) * sign;
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res)
+        nU = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - _res].x/_scale) * sign;
     else
         nU = 0.0;
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= 65279)
-        nD = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + 256].x/_scale) * sign;
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <=_res*_res - _res)
+        nD = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + _res].x/_scale) * sign;
     else
         nD = 0.0;
     norm.x = nL - nR;
-    norm.y = nD - nU;
-    norm.z = 2.0;
+    norm.y = 10.0;
+    norm.z = nD - nU;
     norm.x = norm.x /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);
     norm.y = norm.y /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);
     norm.z = norm.z /sqrt(norm.x*norm.x + norm.y*norm.y + norm.z * norm.z);

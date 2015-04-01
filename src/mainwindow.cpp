@@ -10,10 +10,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     format.setProfile(QGLFormat::CoreProfile);
 
     m_openGLWidget = new OpenGLWidget(format,this);
+    m_openGLWidget->setMinimumWidth(600);
     ui->gridLayout->addWidget(m_openGLWidget,0,0,1,1);
 
-    ui->groupBox->setMaximumWidth(350);
+    ui->groupBox->setMaximumWidth(500);
 
+    this->setMinimumWidth(1000);
     ui->choppinessSlider->setMinimum(0);
     ui->choppinessSlider->setSliderPosition(2);
     ui->choppinessSlider->setMaximum(10);

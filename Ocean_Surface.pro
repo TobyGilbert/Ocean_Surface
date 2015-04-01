@@ -29,7 +29,8 @@ SOURCES += \
     src/CudaUtils.cpp \
     src/Ocean.cu \
     src/OceanGrid.cpp \
-    src/Skybox.cpp
+    src/Skybox.cpp \
+    src/Sun.cpp
 
 CUDA_SOURCES += src/Ocean.cu
 SOURCES -= src/Ocean.cu
@@ -48,7 +49,8 @@ HEADERS += \
     include/CudaUtils.h \
     include/Ocean.h \
     include/OceanGrid.h \
-    include/Skybox.h
+    include/Skybox.h \
+    include/Sun.h
 
 # use this to suppress some warning from boost
 QMAKE_CXXFLAGS_WARN_ON += "-Wno-unused-parameter"
@@ -85,7 +87,7 @@ QMAKE_LIBDIR += $$CUDA_DIR/lib
 QMAKE_LIBDIR += $$CUDA_DIR/samples/common/lib
 QMAKE_LIBDIR += /opt/local/lib
 
-LIBS += -lassimp -lcudart -lcufftw -lcufft
+LIBS += -lassimp -lnoise -lcudart -lcufftw -lcufft
 
 DESTDIR=./
 
@@ -132,5 +134,7 @@ OTHER_FILES += \
     textures/miramar_negz.jpg \
     textures/miramar_posx.jpg \
     textures/miramar_posy.jpg \
-    textures/miramar_posz.jpg
+    textures/miramar_posz.jpg \
+    models/sphere.obj \
+    models/cube.obj
 

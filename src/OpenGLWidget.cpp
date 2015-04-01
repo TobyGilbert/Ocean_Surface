@@ -19,12 +19,15 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
     m_spinYFace=0;
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     this->resize(_parent->size());
+
+    m_sunPos = glm::vec3(0.0, 0.0, 0.0);
 }
 //----------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::~OpenGLWidget(){
     delete m_cam;
     delete m_oceanGrid;
     delete m_skybox;
+    delete m_sun;
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::initializeGL(){
@@ -41,11 +44,13 @@ void OpenGLWidget::initializeGL(){
     m_modelMatrix = glm::mat4(1.0);
 
     // Initialize the camera
-    m_cam = new Camera(glm::vec3(0.0, 50.0, 50.0));
+    m_cam = new Camera(glm::vec3(0.0, 100.0, 100.0));
 
-    m_oceanGrid = new OceanGrid(256, 1000, 1000);
+    m_oceanGrid = new OceanGrid(256, 500, 500);
 
     m_skybox = new Skybox();
+
+    m_sun = new Sun();
 
     genFBOs();
 
@@ -82,8 +87,8 @@ void OpenGLWidget::renderReflections(){
     glm::mat4 rotx;
     glm::mat4 roty;
 
-    rotx = glm::rotate(rotx, m_spinXFace, glm::vec3(1.0, 0.0, 0.0));
-    roty = glm::rotate(roty, m_spinYFace, glm::vec3(0.0, 1.0, 0.0));
+    rotx = glm::rotate(rotx, float(m_spinXFace/20.0), glm::vec3(1.0, 0.0, 0.0));
+    roty = glm::rotate(roty, float(m_spinYFace/20.0), glm::vec3(0.0, 1.0, 0.0));
 
     m_mouseGlobalTX = rotx*roty;
     // add the translations
@@ -92,14 +97,15 @@ void OpenGLWidget::renderReflections(){
     m_mouseGlobalTX[3][2] = m_modelPos.z;
     m_modelMatrix = m_mouseGlobalTX;
 
-    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5000.0, -5000.0, 5000.0));
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(50000.0, -50000.0, 50000.0));
     m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_skybox->render();
 
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
-
+    // Set the sun Position
+    m_oceanGrid->setSunPos(m_sunPos);
     struct timeval tim;
     gettimeofday(&tim, NULL);
     double start = tim.tv_sec+(tim.tv_usec * 1.0e-6);
@@ -116,8 +122,8 @@ void OpenGLWidget::paintGL(){
     glm::mat4 rotx;
     glm::mat4 roty;
 
-    rotx = glm::rotate(rotx, m_spinXFace, glm::vec3(1.0, 0.0, 0.0));
-    roty = glm::rotate(roty, m_spinYFace, glm::vec3(0.0, 1.0, 0.0));
+    rotx = glm::rotate(rotx, float(m_spinXFace/20.0), glm::vec3(1.0, 0.0, 0.0));
+    roty = glm::rotate(roty, float(m_spinYFace/20.0), glm::vec3(0.0, 1.0, 0.0));
 
     m_mouseGlobalTX = rotx*roty;
     m_mouseGlobalTX[3][0] = m_modelPos.x;
@@ -125,13 +131,21 @@ void OpenGLWidget::paintGL(){
     m_mouseGlobalTX[3][2] = m_modelPos.z;
     m_modelMatrix = m_mouseGlobalTX;
 
+    m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, -20.0, 0.0));
+
 //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_oceanGrid->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_oceanGrid->render();
 
-    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5000.0, 5000.0, 5000.0));
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(50000.0, 50000.0, 50000.0));
     m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_skybox->render();
+
+    m_modelMatrix = m_mouseGlobalTX;
+    m_modelMatrix = glm::translate(m_modelMatrix, m_sunPos);
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(10.0, 10.0, 10.0));
+    m_sun->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+    m_sun->render();
 
     gettimeofday(&tim, NULL);
     double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);
@@ -145,16 +159,20 @@ void OpenGLWidget::keyPressEvent(QKeyEvent *_event){
             QGuiApplication::exit();
             break;
         case Qt::Key_Left:
-            m_oceanGrid->moveSunLeft();
+           // m_oceanGrid->moveSunLeft();
+            m_sunPos.x -= 5.0;
             break;
         case Qt::Key_Right:
-            m_oceanGrid->moveSunRight();
+            //m_oceanGrid->moveSunRight();
+            m_sunPos.x += 5.0;
             break;
         case Qt::Key_Up:
-            m_oceanGrid->moveSunUp();
+            //m_oceanGrid->moveSunUp();
+            m_sunPos.y += 5.0;
             break;
         case Qt::Key_Down:
-            m_oceanGrid->moveSunDown();
+            //m_oceanGrid->moveSunDown();
+            m_sunPos.y -= 5.0;
             break;
     }
 }
