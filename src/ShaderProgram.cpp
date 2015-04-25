@@ -2,12 +2,12 @@
 #include "Shader.h"
 //--------------------------------------------------------------------------------------------------------------------------
 ShaderProgram::ShaderProgram(){
-#ifdef LINUX
-    GLenum error = glewInit();
-    if(error != GLEW_OK){
-        std::cerr<<"GLEW IS NOT OK!!!"<<std::endl;
-    }
-#endif
+//#ifdef LINUX
+//    GLenum error = glewInit();
+//    if(error != GLEW_OK){
+//        std::cerr<<"GLEW IS NOT OK!!!"<<std::endl;
+//    }
+//#endif
    m_programID = glCreateProgram();
 }
 //--------------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,17 @@
 #ifndef OPENGLWIDGET_H
 #define OPENGLWIDGET_H
-
-
+#ifdef DARWIN
+#include <OpenGL/gl3.h>
+#else
+#include <GL/glew.h>
+#include <GL/gl.h>
+#endif
+#include "ShaderProgram.h"
+#include "Shader.h"
+#include "ModelLoader.h"
+#include "OceanGrid.h"
+#include "Skybox.h"
+#include "Sun.h"
 
 #include <QGLWidget>
 #include <QEvent>
@@ -10,12 +20,6 @@
 #include <Camera.h>
 #include <glm/glm.hpp>
 
-#include "ShaderProgram.h"
-#include "Shader.h"
-#include "ModelLoader.h"
-#include "OceanGrid.h"
-#include "Skybox.h"
-#include "Sun.h"
 
 
 class OpenGLWidget : public QGLWidget
@@ -152,9 +156,10 @@ private:
 
 public slots:
     void updateChoppiness(int value);
-    void updateWindSpeedX(double _x);
-    void updateWindSpeedY(double _y);
+    void updateWindDirX(double _x);
+    void updateWindDirY(double _y);
     void resetSim();
+    void changeResolution(QString _res);
 signals:
     void updateTimer(float _time);
     void updateFPS(float _FPS);

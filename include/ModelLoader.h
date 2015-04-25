@@ -1,13 +1,17 @@
 #ifndef MODELLOADER_H
 #define MODELLOADER_H
 
-#include "assimp/Importer.hpp"
+#ifdef DARWIN
+#include <OpenGL/gl3.h>
+#else
+#include <GL/glew.h>
+#include <GL/gl.h>
+#endif
+#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <vector>
 #include <glm/glm.hpp>
-
-#include <OpenGL/gl3.h>
 class Mesh;
 class ModelLoader{
 public:

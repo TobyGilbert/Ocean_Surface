@@ -32,8 +32,8 @@ SOURCES += \
     src/Skybox.cpp \
     src/Sun.cpp
 
-CUDA_SOURCES += src/Ocean.cu
 SOURCES -= src/Ocean.cu
+CUDA_SOURCES += src/Ocean.cu
 
 
 HEADERS += \
@@ -50,7 +50,8 @@ HEADERS += \
     include/Ocean.h \
     include/OceanGrid.h \
     include/Skybox.h \
-    include/Sun.h
+    include/Sun.h \
+    include/MathsUtils.h
 
 # use this to suppress some warning from boost
 QMAKE_CXXFLAGS_WARN_ON += "-Wno-unused-parameter"
@@ -73,9 +74,11 @@ PROJECT_DIR = $$system(pwd)
 
 # paths to cuda directory
 macx:CUDA_DIR = /Developer/NVIDIA/CUDA-6.5
+linux:CUDA_DIR = /opt/cuda-6.5
 
 NVCCFLAGS = --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v
 
+linux:INCLUDEPATH += /usr/include
 INCLUDEPATH += /usr/local/include
 INCLUDEPATH +=./include /opt/local/include
 INCLUDEPATH += $$CUDA_DIR/include
@@ -83,11 +86,14 @@ INCLUDEPATH += $$CUDA_DIR/samples/common/inc
 INCLUDEPATH += $$CUDA_DIR/../shared/inc
 # lib dirs
 linux:QMAKE_LIBDIR += $$CUDA_DIR/lib64
+linux:QMAKE_LIBDIR += /usr/local/lib
+
 QMAKE_LIBDIR += $$CUDA_DIR/lib
 QMAKE_LIBDIR += $$CUDA_DIR/samples/common/lib
 QMAKE_LIBDIR += /opt/local/lib
 
 LIBS += -lassimp -lnoise -lcudart -lcufftw -lcufft
+linux:LIBS += -lGL -lGLEW -L/usr/local/lib -lnoise
 
 DESTDIR=./
 
@@ -97,7 +103,7 @@ CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
 cuda.input = CUDA_SOURCES
 cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o
 
-cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -G -gencode arch=compute_30,code=sm_30 -c $$NVCCFLAGS $$CUDA_INC $$LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -G -gencode arch=compute_20,code=sm_20 -c $$NVCCFLAGS $$CUDA_INC $$LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
 
 cuda.dependency_type = TYPE_C
 cuda.depend_command = $$CUDA_DIR/bin/nvcc -g -G -M $$CUDA_INC $$NVCCFLAGS ${QMAKE_FILE_NAME}
@@ -136,5 +142,13 @@ OTHER_FILES += \
     textures/miramar_posy.jpg \
     textures/miramar_posz.jpg \
     models/sphere.obj \
-    models/cube.obj
+    models/cube.obj \
+    textures/miramar_negx.jpg \
+    textures/miramar_negy.jpg \
+    textures/miramar_negz.jpg \
+    textures/miramar_posx.jpg \
+    textures/miramar_posy.jpg \
+    textures/miramar_posz.jpg \
+    shaders/CubeMapFrag.glsl \
+    shaders/CubeMapVert.glsl
 

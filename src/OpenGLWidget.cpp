@@ -1,12 +1,12 @@
-#include <QGuiApplication>
 #include "OpenGLWidget.h"
+#include <QGuiApplication>
 #include <iostream>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cuda_runtime.h>
 #include <sys/time.h>
 
 
-const static float INCREMENT=0.1;
+const static float INCREMENT= 2.0;
 const static float ZOOM = 50;
 OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidget(_format,_parent){
     // set this widget to have the initial keyboard focus
@@ -31,6 +31,14 @@ OpenGLWidget::~OpenGLWidget(){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::initializeGL(){
+#ifdef LINUX
+    glewExperimental = GL_TRUE;
+    GLenum error = glewInit();
+    if(error != GLEW_OK){
+        std::cerr<<"GLEW IS NOT OK!!!"<<std::endl;
+    }
+#endif
+
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     // enable depth testing for drawing
     glEnable(GL_DEPTH_TEST);
@@ -52,7 +60,7 @@ void OpenGLWidget::initializeGL(){
 
     m_sun = new Sun();
 
-    m_boat = new ModelLoader("models/yacht.obj");
+//    m_boat = new ModelLoader("models/yacht.obj");
 
     genFBOs();
 
@@ -255,16 +263,30 @@ void OpenGLWidget::timerEvent(QTimerEvent *_event){
 }
 
 void OpenGLWidget::updateChoppiness(int value){
-    // 0 - 10 10  0-0.02
     m_oceanGrid->updateChoppiness((float)value/100.0);
 }
 
-void OpenGLWidget::updateWindSpeedX(double _x){
-    m_oceanGrid->setWindSpeedX(_x);
+void OpenGLWidget::updateWindDirX(double _x){
+    m_oceanGrid->setWindDirX(_x);
 }
-void OpenGLWidget::updateWindSpeedY(double _y){
-    m_oceanGrid->setWindSpeedY(_y);
+void OpenGLWidget::updateWindDirY(double _y){
+    m_oceanGrid->setWindDirY(_y);
 }
 void OpenGLWidget::resetSim(){
     m_oceanGrid->resetSim();
+}
+
+void OpenGLWidget::changeResolution(QString _res){
+    if(_res == QString("128x128")){
+        m_oceanGrid->setResolution(128);
+    }
+    else if (_res == QString("256x256")){
+        m_oceanGrid->setResolution(256);
+    }
+    else if (_res == QString("512x512")){
+        m_oceanGrid->setResolution(512);
+    }
+    else if (_res == QString("1024x1024")){
+        m_oceanGrid->setResolution(1024);
+    }
 }

@@ -1,17 +1,18 @@
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @author Toby Gilbert
 // ----------------------------------------------------------------------------------------------------------------------------------------
+#include "Ocean.h"
 #include <helper_cuda.h>
 #include <cufft.h>
-#include <Ocean.h>
 #include <glm/glm.hpp>
-#include <thrust/complex.h>
+#include <complex.h>
+//#include <thrust/complex.h>
 #include <curand.h>
-#include <helper_cuda_gl.h>
 #include <helper_functions.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <surface_functions.h>
+#include <helper_math.h>
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Uses Gerstner's equation for generating waves on a regular grid
 /// @param d_heightPointer An OpenGL buffer for storing the position information for the vertices on the grid
@@ -77,47 +78,54 @@ __global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, 
 /// @param _time The current simulation time
 /// @param _res The simulation resolution
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void frequencyDomain(glm::vec2* d_h0Pointer, float2* d_htPointer, float _time, int _res){
+__global__ void frequencyDomain(float2* d_h0Pointer, float2* d_htPointer, float _time, int _res){
     // A constant for the accelleration due to gravity
     const float g = 9.81;
 
     // A 2D vector to represent a position on the grid with constraits -(_res/2) <= k < (_res/2)
-    glm::vec2 k;
-    k.x = float((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))) - (_res/2.0));
-    k.y = float(((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res))) - (_res/2.0));
+    float2 k;
+    k.x = float((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))) - (_res/2));
+//    printf("k.x %f\n", k.x);
+    k.y = float(((blockIdx.x * (blockDim.x/_res)) + ceil(double(threadIdx.x / _res))) - (_res/2));
+//    printf("k.y %f\n", k.y);
     float kLen = sqrt(double(k.x*k.x + k.y*k.y));
 
     // Calculate the wave frequency
     float w = sqrt(double(g * kLen));
 
     // complexExp holds the complex exponential where the x value stores the real part and the y value stores the imaginary part
-    glm::vec2 complexExp;
+    float2 complexExp;
     complexExp.x = sin(w * _time);
     complexExp.y = cos(w * _time);
 
-    glm::vec2 complexExpConjugate;
+    float2 complexExpConjugate;
     complexExpConjugate.x = complexExp.x;
     complexExpConjugate.y = -complexExp.y;
 
     int blockNum =(( _res * _res )/ blockDim.x) - 1;
 
-    glm::vec2 h0 = d_h0Pointer[(blockIdx.x * blockDim.x) + threadIdx.x];
-    glm::vec2 h0conjugate = d_h0Pointer[((blockNum - blockIdx.x) * blockDim.x) + ((blockDim.x - 1) - threadIdx.x)];
+    float2 h0 = d_h0Pointer[(blockIdx.x * blockDim.x) + threadIdx.x];
+    float2 h0conjugate = d_h0Pointer[((blockNum - blockIdx.x) * blockDim.x) + ((blockDim.x - 1) - threadIdx.x)];
 
     // Swap the imaginary parts sign
     h0conjugate.y = -h0conjugate.y;
 
     // Equation 26 of Tessendorf's paper h(k,t) = h0(k)exp{iw(k)t} + ~h0(-k)exp{-iw(k)t}
-    glm::vec2 h;
+    float2 h;
     h.x = (h0.x * complexExp.x - h0.y * complexExp.y);
     h.y = (h0.x * complexExp.x + h0.y * complexExp.y);
 
-    glm::vec2 hStar;
+    float2 hStar;
     hStar.x = (h0conjugate.x * complexExpConjugate.x - h0conjugate.y * complexExpConjugate.y) ;
     hStar.y = (h0conjugate.x * complexExpConjugate.x - h0conjugate.y * complexExpConjugate.y) ;
 
     // Output h(k,t) term to d_htPointer buffer which represents a set of points in the frequency domain
-    glm::vec2 hTilde = h + hStar;
+    float2 hTilde;
+    hTilde.x= h.x + hStar.x;
+    hTilde.y = h.y + hStar.y;
+
+//    printf("hTilde %f\n", hTilde.x);
+
     d_htPointer[(blockIdx.x * blockDim.x) + threadIdx.x].x = hTilde.x;
     d_htPointer[(blockIdx.x * blockDim.x) + threadIdx.x].y = hTilde.y;
 }
@@ -131,25 +139,86 @@ __global__ void frequencyDomain(glm::vec2* d_h0Pointer, float2* d_htPointer, flo
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2* d_xDisplacement, float _choppiness, int _res, float _scale){
+__global__ void height(float3* d_position, float3* d_normals,  float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
     // A vertex on the grid
     int u = int(threadIdx.x - (_res * floor(double(threadIdx.x / _res))));
     int v = int((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res)));
-
-
+    // Calculate our vertex normals
     // Sign correction - Unsure why this is needed
     float sign = 1.0;
     if ((u+v) % 2 != 0){
         sign = -1.0;
     }
-    // Update the heights of the vertices and add x and z displacement
-//    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ;
-    surf2Dwrite(make_uchar4((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign + 100.0, 0, 0, 255), _surface, (int)sizeof(uchar4)*u, v, cudaBoundaryModeZero);
-
-    if ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign > 80){
-        printf("%f\n", (d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign);
+    float3 norm = make_float3(0.0, 0.0, 0.0);
+    float nL, nR, nU, nD;
+    // TODO remove branching conditions
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= 1){
+        nL = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - 1].x/_scale) * sign;
     }
-    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x += (d_xDisplacement[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * _choppiness * sign;
+    else{
+        nL = 0.0f;
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <=(_res*_res)-1){
+        nR = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + 1].x/_scale) * sign;
+    }
+    else{
+        nR = 0.0f;
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res){
+        nU = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - _res].x/_scale) * sign;
+    }
+    else{
+        nU = 0.0f;
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= (_res*_res)-_res-1){
+        nD = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + _res].x/_scale) * sign;
+    }
+    else{
+        nD = 0.0f;
+    }
+    norm.x = nL - nR;
+    norm.y = 1.0f;
+    norm.z = nD - nU;
+    norm = normalize(norm);
+
+////     Update the normals buffer
+    d_normals[(blockIdx.x * blockDim.x) + threadIdx.x] = norm;
+
+
+    // Update the heights of the vertices
+    float prevX = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x;
+    float prevZ = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z;
+    float xDisp = _choppiness * (d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
+    float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
+    float height =  float(((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f;
+    float3 newPos = make_float3(prevX+xDisp, height, prevZ+zDisp);
+    d_position[(blockIdx.x * blockDim.x) + threadIdx.x] = newPos;
+    //d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = float(((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f;
+//    printf("height: %f\n", (((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f);
+    //printf("chop x %f \n",d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x  );
+   // printf("chop z %f \n",d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x  );
+
+
+//    float xdisp = d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x;
+
+//    float zdisp = d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x;
+
+//    printf("xdisp %f \n", xdisp);
+//    printf("ydisp %f \n", zdisp);
+
+ //   d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x = prevX + 0.5;
+ //   d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z = prevZ + 0.5;
+
+
+
+//    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y /= 255.0f;
+//    unsigned char height = (unsigned char)(((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0);
+//    height = min(255, max(0, height));
+//    uchar4 colour = make_uchar4(height, (float)0, (float)0, (float)255);
+//    surf2Dwrite(colour, _surface, (int)sizeof(colour)*u, v, cudaBoundaryModeZero);
+
+
+
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Create x displacement in in the frequency domain
@@ -158,24 +227,30 @@ __global__ void height(glm::vec3* d_position, cudaSurfaceObject_t _surface, floa
 /// @param d_zDisplacement An OpenGL buffer to store the z displacement in the frequency domain
 /// @param _res The resolution of the grid
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void choppiness(float2* d_ht, int _res){
+__global__ void choppiness(float2* d_Ht, float2* d_chopX, float2* d_chopZ, float2 _windSpeed){
     // k - A position on the grid
     float2 k;
-    k.x = float((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))) - (_res/2.0));
-    k.y = float(((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res))) - (_res/2.0));
+    k.x = _windSpeed.x;
+    k.y = _windSpeed.y;
+
     float kLen = sqrt(double(k.x*k.x + k.y*k.y));
-    float2 prev = d_ht[(blockIdx.x * blockDim.x) + threadIdx.x];
 
     float Kx = k.x / kLen;
     float Kz = k.y / kLen;
+
     if (kLen == 0.0){
         Kx = 0.0;
         Kz = 0.0;
     }
-    d_ht[(blockIdx.x * blockDim.x) + threadIdx.x].x = prev.x * -Kx;
+
+    d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x = 0.0;
+    d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].y = d_Ht[(blockIdx.x * blockDim.x) + threadIdx.x].y * -Kx;
+
+    d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x = 0.0;
+    d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].y = d_Ht[(blockIdx.x * blockDim.x) + threadIdx.x].y * -Kz;
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateFrequencyDomain(glm::vec2 *d_h0, float2 *d_ht, float _time, int _res){
+void updateFrequencyDomain(float2 *d_h0, float2 *d_ht, float _time, int _res){
     int numBlocks =( _res * _res )/ 1024;
     frequencyDomain<<<numBlocks, 1024>>>(d_h0, d_ht, _time, _res);
 }
@@ -185,17 +260,17 @@ void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave 
     gerstner<<<numBlocks, 1024>>>(d_heightPointer, d_normalPointer, d_waves,  _time, _res, _numWaves);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2 *d_xDisplacement, float _choppiness, int _res, float _scale){
+void updateHeight(float3* d_position, float3* d_norms, float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
 
     // Bind the cudaArray to a globally scoped CUDA surface
 //    cudaBindSurfaceToArray(_surface, d_heightsCudaArray);
 
     int numBlocks =( _res * _res )/ 1024;
-    height<<<numBlocks, 1024>>>(d_position, _surface, d_height, d_xDisplacement, _choppiness,  _res, _scale);
+    height<<<numBlocks, 1024>>>(d_position, d_norms, d_height, d_chopX, d_chopZ, _choppiness,  _res, _scale);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void addChoppiness(float2* d_ht, int _res){
+void addChoppiness(float2* d_Heights, float2* d_chopX, float2* d_chopZ, int _res, float2 _windSpeed){
     int numBlocks =( _res * _res )/ 1024;
-    choppiness<<<numBlocks, 1024>>>(d_ht, _res);
+    choppiness<<<numBlocks, 1024>>>(d_Heights, d_chopX, d_chopZ, _windSpeed);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------

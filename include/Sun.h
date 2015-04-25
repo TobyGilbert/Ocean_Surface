@@ -1,8 +1,8 @@
 #ifndef SUN_H
 #define SUN_H
-#include <glm/glm.hpp>
 #include "ModelLoader.h"
 #include "ShaderProgram.h"
+#include <glm/glm.hpp>
 
 class Sun{
 public:

@@ -49,7 +49,7 @@ struct wave{
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateHeight(glm::vec3* d_position, cudaSurfaceObject_t _surface, float2* d_height, float2* d_xDisplacement, float _choppiness, int _res, float _scale);
+void updateHeight(float3* d_position, float3* d_norms,  float2* d_height, float2 *d_chopX, float2 *d_chopZ, float _choppiness, int _res, float _scale);
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Calls the Cuda kernel for caluclating vertex heights using the Gerstner wave model
 /// @param d_point
@@ -67,12 +67,12 @@ void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave 
 /// @param _time The current time in the simulation
 /// @param _res The resolution of the grid
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateFrequencyDomain(glm::vec2 *d_h0, float2 *d_ht, float _time, int _res);
+void updateFrequencyDomain(float2 *d_h0, float2 *d_ht, float _time, int _res);
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Adds x displacement to the wave simulation using equation 29 of Tessendorf's paper
 /// @param d_ht An OpenGL buffer which holds the frequency field
 /// @brief _res The resolution of the grid
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void addChoppiness(float2* d_ht, int _res);
+void addChoppiness(float2* d_Heights, float2 *d_chopX, float2 *d_chopZ, int _res, float2 _windSpeed);
 // ----------------------------------------------------------------------------------------------------------------------------------------
 #endif

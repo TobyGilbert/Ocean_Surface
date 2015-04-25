@@ -7,6 +7,7 @@ in vec4 eyeVector;
 in float height;
 in vec2 texCoord;
 in float dist;
+in vec3 vertpos;
 
 out vec4 fragColour;
 
@@ -31,24 +32,24 @@ uniform sampler2D perlinTexture;
 uniform sampler2D fftTexture;
 uniform mat4 modelViewMatrix;
 
-vec3 skyColour(vec3 eye){
-  eye.y = max(eye.y, 0.0);
-  vec3 colour;
-  colour.x = pow(1.0-eye.y, 2.0);
-  colour.y = 1.0 - eye.y;
-  colour.z = 0.6 + (1.0-eye.y) * 0.4;
-  return colour;
-}
+//vec3 skyColour(vec3 eye){
+//  eye.y = max(eye.y, 0.0);
+//  vec3 colour;
+//  colour.x = pow(1.0-eye.y, 2.0);
+//  colour.y = 1.0 - eye.y;
+//  colour.z = 0.6 + (1.0-eye.y) * 0.4;
+//  return colour;
+//}
 
 float Fresnel(){
-  float fresnel = 1.0 - max(dot(normalize(normal), -viewVector.xyz), 0.0);
-  fresnel = pow(fresnel, 3.0) * 0.65;
-  return fresnel;
+    float f = 1.0 - max(dot(normal, -viewVector.xyz), 0.0);
+    f = pow(f, 10.0) * 0.65;
+    return f;
 }
 
-vec3 diffuse(){
+float diffuse(){
   vec3 s = normalize(sun.position - position.xyz);
-  return vec3(max(dot(s,normal),0.0));
+  return max(dot(s,normal),0.0);
 }
 
 vec3 specular(){
@@ -61,8 +62,8 @@ vec3 specular(){
 }
 // Sun streak referenced from https://www.shadertoy.com/view/4dl3zr
 vec3 sunStreak(){
-  vec3 r = normalize(reflect(normalMatrix* -sun.position, normal));
-  return vec3((0.8 * pow(max(0.0, dot(r, normalize(-position.xyz))), 200.0)));
+  vec3 r = normalize(reflect(-sun.position, normal));
+  return vec3((1.0 * pow(max(0.0, dot(r, normalize(-position.xyz))), 200.0)));
 }
 
 void main(){
@@ -72,9 +73,10 @@ void main(){
 
   // Calculate a reflected based on the reflection map and a refraction
   // colour based on our diffuse function
-  vec4 reflectionVector = normalize(reflect(viewVector, vec4(N, 1.0)));
+  vec3 reflectionVector = viewVector.xyz - 2.0 * normal * dot(normal, viewVector.xyz);
+  //vec4 reflectionVector = normalize(reflect(viewVector, vec4(N, 1.0)));
   vec3 reflectedCol = texture(enviroMap, reflectionVector.xyz).xyz;
-  vec3 refractedCol = seaBaseCol + diffuse() * seaTopCol * 0.12;
+  vec3 refractedCol = seaBaseCol + vec3(diffuse()) * seaTopCol * 0.12;
 
   vec3 colour = mix(refractedCol, reflectedCol, Fresnel());
   vec3 distance = (position.xyz - cameraPosition.xyz);
@@ -83,9 +85,16 @@ void main(){
 //  colour += specular();
   colour += sunStreak();
 
+//  fragColour = vec4(vec3(Fresnel()), 1.0);
+ // fragColour = viewVector;
+//  fragColour = vec4(colour, 1.0);
+//  fragColour = vec4(diffuse(), 1.0);
+//  fragColour = vec4(refractedCol, 1.0);
+//  fragColour = vec4(position);
 //  fragColour = vec4(vec3(dist), 1.0);
-  fragColour =vec4(vec3(colour), 1.0);
+//  fragColour =vec4(vec3(N), 1.0);
 //  fragColour =vec4(vec3(height/200.0), 1.0);
-//  fragColour =vec4(normal, 1.0);
+//  fragColour = texture(fftTexture, (vertpos.xz + 250  )/ 500);
+  fragColour =vec4(normal, 1.0);
 //  fragColour = texture(perlinTexture, texCoord);
 }

@@ -1,8 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "OpenGLWidget.h"
 #include <QMainWindow>
-#include <openglwidget.h>
 namespace Ui {
 class MainWindow;
 }

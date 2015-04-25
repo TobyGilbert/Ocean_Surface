@@ -1,8 +1,14 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <iostream>
+#ifdef DARWIN
 #include <OpenGL/gl3.h>
+#else
+#include <GL/glew.h>
+#include <GL/gl.h>
+#endif
+
+#include <iostream>
 #include <cmath>
 
 #define GLM_FORCE_RADIANS
