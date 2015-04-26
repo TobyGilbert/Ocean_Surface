@@ -431,7 +431,6 @@ void OceanGrid::update(){
 
     // Map the graphics resources
     checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceVerts));
-//    checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceHeightMap));
     checkCudaErrors(cudaGraphicsMapResources(1, &m_resourceNorms));
 
     // Get pointers to the buffers
@@ -439,19 +438,8 @@ void OceanGrid::update(){
     size_t numBytes;
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointerVerts, &numBytes, m_resourceVerts));
 
-//    cudaArray* cudaArrayHeightMap;
-//    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&cudaArrayHeightMap, m_resourceHeightMap, 0, 0));
-//    cudaResourceDesc viewCudaArrayResourceDesc;
-//    memset(&viewCudaArrayResourceDesc, 0, sizeof(viewCudaArrayResourceDesc));
-//    viewCudaArrayResourceDesc.resType = cudaResourceTypeArray;
-//    viewCudaArrayResourceDesc.res.array.array = cudaArrayHeightMap;
-
     float3* mapPointerNorms;
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&mapPointerNorms, &numBytes, m_resourceNorms));
-
-
-//    cudaSurfaceObject_t viewCudaSurfaceObject;
-//    checkCudaErrors(cudaCreateSurfaceObject(&viewCudaSurfaceObject, &viewCudaArrayResourceDesc));
 
     // Creates the frequency field
     m_time = now - startTime;
@@ -476,7 +464,6 @@ void OceanGrid::update(){
 
     // Unmap the cuda graphics resources
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceVerts));
-//    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceHeightMap));
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_resourceNorms));
 
     // Syncronise our threads
@@ -485,10 +472,6 @@ void OceanGrid::update(){
     // Bind our local reflections texture to acitive texture 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_reflectTex);
-
-//    glActiveTexture(GL_TEXTURE1);
-//    glBindTexture(GL_TEXTURE_2D, m_fftHeightTex);
-    // Bind texture for perlin Noise
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, m_perlinTex);
 
@@ -498,7 +481,7 @@ void OceanGrid::render(){
     update();
     glBindVertexArray(m_VAO);
     glPointSize(5.0);
-    glDrawElementsInstanced(GL_POINTS , m_vertSize, GL_UNSIGNED_INT, 0, m_numTiles);
+    glDrawElementsInstanced(GL_TRIANGLES , m_vertSize, GL_UNSIGNED_INT, 0, m_numTiles);
 
     glBindVertexArray(0);
 }

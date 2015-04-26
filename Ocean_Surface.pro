@@ -93,7 +93,7 @@ QMAKE_LIBDIR += $$CUDA_DIR/samples/common/lib
 QMAKE_LIBDIR += /opt/local/lib
 
 LIBS += -lassimp -lnoise -lcudart -lcufftw -lcufft
-linux:LIBS += -lGL -lGLEW -L/usr/local/lib -lnoise
+linux:LIBS += -lGL -lGLEW -L/usr/local/lib -lassimp
 
 DESTDIR=./
 

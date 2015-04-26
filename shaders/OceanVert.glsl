@@ -83,7 +83,7 @@ void main(){
 
  // pos.y += (((texture(perlinTexture, texCoord).r) + 5.0)* dist);
   position = modelViewMatrix * vec4(pos, 1.0);
-  viewVector = normalize(cameraPosition - position);
+  viewVector = normalize(position - cameraPosition);
   eyeVector = normalize(cameraPosition - position);
 
   normal = normalize(normalMatrix * vertexNormal);//(normalMatrix* calcNormals(texCoord, (vertexPosition.xz + 250 )/ 500.0, dist));

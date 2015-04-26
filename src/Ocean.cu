@@ -139,87 +139,94 @@ __global__ void frequencyDomain(float2* d_h0Pointer, float2* d_htPointer, float 
 /// @param _res The resolution of the grid
 /// @param _scale Scales the amplitude of the waves
 // ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void height(float3* d_position, float3* d_normals,  float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
+__global__ void height(float3* d_position,  float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
     // A vertex on the grid
     int u = int(threadIdx.x - (_res * floor(double(threadIdx.x / _res))));
     int v = int((blockIdx.x * (blockDim.x/(float)_res)) + ceil(double(threadIdx.x / _res)));
-    // Calculate our vertex normals
+
     // Sign correction - Unsure why this is needed
     float sign = 1.0;
     if ((u+v) % 2 != 0){
         sign = -1.0;
     }
-    float3 norm = make_float3(0.0, 0.0, 0.0);
-    float nL, nR, nU, nD;
-    // TODO remove branching conditions
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= 1){
-        nL = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - 1].x/_scale) * sign;
-    }
-    else{
-        nL = 0.0f;
-    }
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <=(_res*_res)-1){
-        nR = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + 1].x/_scale) * sign;
-    }
-    else{
-        nR = 0.0f;
-    }
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res){
-        nU = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) - _res].x/_scale) * sign;
-    }
-    else{
-        nU = 0.0f;
-    }
-    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= (_res*_res)-_res-1){
-        nD = (d_height[((blockIdx.x * blockDim.x) + threadIdx.x) + _res].x/_scale) * sign;
-    }
-    else{
-        nD = 0.0f;
-    }
-    norm.x = nL - nR;
-    norm.y = 1.0f;
-    norm.z = nD - nU;
-    norm = normalize(norm);
-
-////     Update the normals buffer
-    d_normals[(blockIdx.x * blockDim.x) + threadIdx.x] = norm;
-
 
     // Update the heights of the vertices
     float prevX = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x;
     float prevZ = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z;
-    float xDisp = _choppiness * (d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
-    float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
-    float height =  float(((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f;
-    float3 newPos = make_float3(prevX+xDisp, height, prevZ+zDisp);
+//    float xDisp = /*_choppiness */ d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x;//  /_scale) * sign;
+   // float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
+//    float xDisp = 0.0;
+    float zDisp = 0.0;
+    float height =  ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) / 255.0f;
+    float3 newPos = make_float3(prevX, height, prevZ);
+
+    printf("new Pos %f %f %f \n", newPos.x, newPos.y, newPos.z);
+
     d_position[(blockIdx.x * blockDim.x) + threadIdx.x] = newPos;
-    //d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y = float(((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f;
-//    printf("height: %f\n", (((((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0f))) / 255.0f);
-    //printf("chop x %f \n",d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x  );
-   // printf("chop z %f \n",d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x  );
-
-
-//    float xdisp = d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x;
-
-//    float zdisp = d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x;
-
-//    printf("xdisp %f \n", xdisp);
-//    printf("ydisp %f \n", zdisp);
-
- //   d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x = prevX + 0.5;
- //   d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z = prevZ + 0.5;
-
-
-
-//    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y /= 255.0f;
-//    unsigned char height = (unsigned char)(((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) + 100.0);
-//    height = min(255, max(0, height));
-//    uchar4 colour = make_uchar4(height, (float)0, (float)0, (float)255);
-//    surf2Dwrite(colour, _surface, (int)sizeof(colour)*u, v, cudaBoundaryModeZero);
-
-
-
 }
+
+__global__ void calculateNormals(float3* d_position, float3* d_normals, int _res, float _scale){
+
+    float3 norm = make_float3(0.0, 0.0, 0.0);
+    float3 posL, posR, posD, posU;
+    // TODO remove branching conditions
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= 1){
+        posL = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) - 1]);
+    }
+    else{
+        posL = make_float3(0.0, 0.0, 0.0);
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <=(_res*_res)-2){
+        posR = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) + 1]);
+    }
+    else{
+        posR = make_float3(0.0, 0.0, 0.0);
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res){
+        posU = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) - _res]);
+    }
+    else{
+        posU = make_float3(0.0, 0.0, 0.0);
+    }
+    if (((blockIdx.x * blockDim.x) + threadIdx.x) <= (_res*_res)-_res-1){
+        posD = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) + _res]);
+    }
+    else{
+        posD = make_float3(0.0, 0.0, 0.0);
+    }
+
+
+    float3 leftVec, rightVec, topVec, bottomVec;
+    float3 centerVec = d_position[((blockIdx.x * blockDim.x) + threadIdx.x)];
+    leftVec =  posL - centerVec;
+    leftVec.y *= 100.0;
+    rightVec = posR - centerVec;
+    rightVec.y *= 100.0;
+    topVec = posU - centerVec;
+    topVec.y *= 100.0;
+    bottomVec =  posD - centerVec;
+    bottomVec.y *= 100.0;
+//    printf("leftVec %f, %f, %f\n ", leftVec.x, leftVec.y, leftVec.z);
+//    printf("rightVec %f, %f, %f\n ", rightVec.x, rightVec.y, rightVec.z);
+//    printf("topVec %f, %f, %f\n ", topVec.x, topVec.y, topVec.z);
+//    printf("bottomVec %f, %f, %f\n ", bottomVec.x, bottomVec.y, bottomVec.z);
+
+
+    float3 tmpNorm1 = normalize(cross(leftVec, topVec));
+    float3 tmpNorm2 = normalize(cross(topVec, rightVec));
+    float3 tmpNorm3 = normalize(cross(rightVec, bottomVec));
+    float3 tmpNorm4 = normalize(cross(bottomVec, leftVec));
+
+    tmpNorm1.y = fabs(tmpNorm1.y);
+    tmpNorm2.y = fabs(tmpNorm2.y);
+    tmpNorm3.y = fabs(tmpNorm3.y);
+    tmpNorm4.y = fabs(tmpNorm4.y);
+    norm = normalize((tmpNorm1 + tmpNorm2 + tmpNorm3 + tmpNorm4));
+
+    // Update the normals buffer
+    d_normals[(blockIdx.x * blockDim.x) + threadIdx.x] = norm;
+}
+
 // ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Create x displacement in in the frequency domain
 /// @param
@@ -261,12 +268,12 @@ void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave 
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void updateHeight(float3* d_position, float3* d_norms, float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
-
-    // Bind the cudaArray to a globally scoped CUDA surface
-//    cudaBindSurfaceToArray(_surface, d_heightsCudaArray);
-
     int numBlocks =( _res * _res )/ 1024;
-    height<<<numBlocks, 1024>>>(d_position, d_norms, d_height, d_chopX, d_chopZ, _choppiness,  _res, _scale);
+    height<<<numBlocks, 1024>>>(d_position, d_height, d_chopX, d_chopZ, _choppiness,  _res, _scale);
+
+    cudaThreadSynchronize();
+
+    calculateNormals<<<numBlocks, 1024>>>(d_position, d_norms, _res, _scale);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void addChoppiness(float2* d_Heights, float2* d_chopX, float2* d_chopZ, int _res, float2 _windSpeed){

@@ -43,7 +43,7 @@ uniform mat4 modelViewMatrix;
 
 float Fresnel(){
     float f = 1.0 - max(dot(normal, -viewVector.xyz), 0.0);
-    f = pow(f, 10.0) * 0.65;
+    f = pow(f, 2.0) * 0.65;
     return f;
 }
 
@@ -63,7 +63,7 @@ vec3 specular(){
 // Sun streak referenced from https://www.shadertoy.com/view/4dl3zr
 vec3 sunStreak(){
   vec3 r = normalize(reflect(-sun.position, normal));
-  return vec3((1.0 * pow(max(0.0, dot(r, normalize(-position.xyz))), 200.0)));
+  return vec3((1.0 * pow(max(0.0, dot(r, normalize(-position.xyz))), 20.0)));
 }
 
 void main(){
@@ -85,9 +85,16 @@ void main(){
 //  colour += specular();
   colour += sunStreak();
 
-//  fragColour = vec4(vec3(Fresnel()), 1.0);
  // fragColour = viewVector;
-//  fragColour = vec4(colour, 1.0);
+  if (position.x < 0){
+    fragColour = vec4(colour, 1.0);
+  }
+  else if (position.y < 0){
+    fragColour = vec4(vec3(Fresnel()), 1.0);
+  }
+  else{
+   fragColour =vec4(vec3(0.5) + vec3(0.5) * normal, 1.0);
+  }
 //  fragColour = vec4(diffuse(), 1.0);
 //  fragColour = vec4(refractedCol, 1.0);
 //  fragColour = vec4(position);
@@ -95,6 +102,5 @@ void main(){
 //  fragColour =vec4(vec3(N), 1.0);
 //  fragColour =vec4(vec3(height/200.0), 1.0);
 //  fragColour = texture(fftTexture, (vertpos.xz + 250  )/ 500);
-  fragColour =vec4(normal, 1.0);
 //  fragColour = texture(perlinTexture, texCoord);
 }
