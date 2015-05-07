@@ -62,8 +62,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->m_baseColourBtn->setAutoFillBackground(true);
 
     // Sun streak width
+    ui->m_sunStreakSpinBox->setMinimum(50.0);
     ui->m_sunStreakSpinBox->setMaximum(10000.0);
-    ui->m_sunStreakSpinBox->setValue(200.0);
+    ui->m_sunStreakSpinBox->setValue(750.0);
+
+    // Pan box
+    ui->m_panCheckBox->setChecked(true);
 
     connect(ui->m_xWindSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(updateWindDirX(double)));
     connect(ui->m_xWindSpinBox, SIGNAL(editingFinished()), m_openGLWidget, SLOT(resetSim()));
@@ -80,6 +84,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->m_boatCheckBox, SIGNAL(clicked()), m_openGLWidget, SLOT(boatCheckBox()));
     connect(ui->m_skyboxCheckBox, SIGNAL(clicked()), m_openGLWidget, SLOT(skyboxCheckBox()));
     connect(ui->m_sunStreakSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(setSunStreakWidth(double)));
+    connect(ui->m_panCheckBox, SIGNAL(clicked()), m_openGLWidget, SLOT(setPan()));
 }
 //-------------------------------------------------------------------------------------------------------------------------
 MainWindow::~MainWindow(){
@@ -97,7 +102,12 @@ void MainWindow::simulationTime(float _time){
 //-------------------------------------------------------------------------------------------------------------------------
 void MainWindow::changeSeaBaseColourBtn(){
     QColor col;
-    col = QColorDialog::getColor();
+    QColorDialog dialog(this);
+    QColor prevColour;
+    prevColour.setRed(m_openGLWidget->getSeaBaseColour().x*255);
+    prevColour.setGreen(m_openGLWidget->getSeaBaseColour().y*255);
+    prevColour.setBlue(m_openGLWidget->getSeaBaseColour().z*255);
+    col = dialog.getColor(prevColour);
     QPalette palette = ui->m_baseColourBtn->palette();
     palette.setColor( QPalette::Button, col  );
     ui->m_baseColourBtn->setPalette(palette);
@@ -107,7 +117,12 @@ void MainWindow::changeSeaBaseColourBtn(){
 //-------------------------------------------------------------------------------------------------------------------------
 void MainWindow::changeSeaTopColourBtn(){
     QColor col;
-    col = QColorDialog::getColor();
+    QColorDialog dialog(this);
+    QColor prevColour;
+    prevColour.setRed(m_openGLWidget->getSeaTopColour().x*255);
+    prevColour.setGreen(m_openGLWidget->getSeaTopColour().y*255);
+    prevColour.setBlue(m_openGLWidget->getSeaTopColour().z*255);
+    col = dialog.getColor(prevColour);
     QPalette palette = ui->m_topColourBtn->palette();
     palette.setColor( QPalette::Button, col  );
     ui->m_topColourBtn->setPalette(palette);

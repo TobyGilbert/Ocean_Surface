@@ -178,6 +178,13 @@
           <string/>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="m_skyboxCheckBox">
+            <property name="text">
+             <string>Skybox Visable</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="m_boatCheckBox">
             <property name="text">
@@ -185,10 +192,10 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="m_skyboxCheckBox">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="m_panCheckBox">
             <property name="text">
-             <string>Skybox Visable</string>
+             <string> Pan Camera</string>
             </property>
            </widget>
           </item>
@@ -219,7 +226,7 @@
      <x>0</x>
      <y>0</y>
      <width>893</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -33,9 +33,7 @@ OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
     m_numLayers = 10;
     m_seaBaseColour = make_float3(0.1,0.19,0.22);
     m_seaTopColour = make_float3(0.8,0.9,0.6);
-    m_sunStreak = 200.0;
-//    m_seaBaseColour = make_float3( 54.0/255.0, 60.0/255.0, 74.0/255.0);
-//    m_seaTopColour = make_float3(  127.0/255.0, 160.0/255.0, 205.0/255.0);
+    m_sunStreak = 750.0;
     createShader();
     initialise();
 }
@@ -250,7 +248,7 @@ void OceanGrid::initialise(){
 
     createGrid();
 
-    int offset = 495;
+    int offset = 490;
 
     // Create buffer for tile positions
     std::vector<glm::vec3> tileOffsets;

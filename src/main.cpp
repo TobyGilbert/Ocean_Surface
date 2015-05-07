@@ -10,7 +10,7 @@
 #include <CudaUtils.h>
 #include <cuda_runtime.h>
 //-------------------------------------------------------------------------------------------------------------------------
-//#define FULL_SCREEN
+#define FULL_SCREEN
 //-------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char **argv){
     // Print information regarding our device

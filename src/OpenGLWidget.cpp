@@ -6,6 +6,8 @@
 #include <cuda_runtime.h>
 #include <sys/time.h>
 #include <QTimer>
+
+bool zoom = false;
 //-------------------------------------------------------------------------------------------------------------------------
 const static float INCREMENT= 2.0;
 const static float ZOOM = 50;
@@ -21,6 +23,7 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
     m_spinYFace=0;
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     this->resize(_parent->size());
+    m_pan =true;
 }
 //----------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::~OpenGLWidget(){
@@ -65,6 +68,12 @@ void OpenGLWidget::initializeGL(){
 
     m_sunPos = glm::vec3(0.0, 10.0, -50.0);
 
+    m_modelPos.z = -1100.0;
+    m_modelPos.y = -250.0;
+    m_spinXFace = -1.0;
+
+
+
     genFBOs();
 
     QTimer *timer = new QTimer(this);
@@ -95,6 +104,25 @@ void OpenGLWidget::resizeGL(const int _w, const int _h){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::renderReflections(){
+    if (m_pan){
+        m_spinYFace += 0.1;
+    }
+
+
+
+//    if(zoom && m_modelPos.z < -150.0){
+////        std::cout<<m_modelPos.z<<std::endl;
+//        m_modelPos.z += 1.0;
+//    }
+//    else if(!zoom && m_modelPos.z > -1100.0){
+//        m_modelPos.z -= 1.0;
+//    }
+//    if(zoom && m_modelPos.y < 36){
+//        m_modelPos.y += 0.3;
+//    }
+//    else if(!zoom && m_modelPos.y > -250.0){
+//        m_modelPos.y -= 1.0;
+//    }
     // Reset the viewport to the size of the texture and render our reflected geometry
     // scaled by (1, -1, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -128,6 +156,7 @@ void OpenGLWidget::renderReflections(){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
+
     // Set the sun Position
     m_oceanGrid->setSunPos(m_sunPos);
     m_skybox->setSunPos(m_sunPos);
@@ -147,6 +176,12 @@ void OpenGLWidget::paintGL(){
 
     rotx = glm::rotate(rotx, float(m_spinXFace/20.0), glm::vec3(1.0, 0.0, 0.0));
     roty = glm::rotate(roty, float(m_spinYFace/20.0), glm::vec3(0.0, 1.0, 0.0));
+
+//    std::cout<<"spin face x "<<m_spinXFace<<std::endl;
+//    std::cout<<"spin face y "<<m_spinYFace<<std::endl;
+
+//    std::cout<<"model pos y"<<m_modelPos.y<<std::endl;
+//    std::cout<<"model pos z"<<m_modelPos.z<<std::endl;
 
     m_mouseGlobalTX = rotx*roty;
     m_mouseGlobalTX[3][0] = m_modelPos.x;
@@ -207,6 +242,9 @@ void OpenGLWidget::mouseMoveEvent (QMouseEvent *_event){
     int diffx=_event->x()-m_origX;
     int diffy=_event->y()-m_origY;
     m_spinXFace += (float) 0.5f * diffy;
+    if(m_spinXFace < -5){
+        m_spinXFace = -5;
+    }
     m_spinYFace += (float) 0.5f * diffx;
     m_origX = _event->x();
     m_origY = _event->y();
@@ -219,6 +257,12 @@ void OpenGLWidget::mouseMoveEvent (QMouseEvent *_event){
     m_origYPos=_event->y();
     m_modelPos.x += INCREMENT * diffX;
     m_modelPos.y -= INCREMENT * diffY;
+    if (m_modelPos.y > 50){
+        m_modelPos.y = 50.0;
+    }
+    else if(m_modelPos.y < -300){
+        m_modelPos.y = -300.0;
+    }
    }
 }
 //------------------------------------------------------------------------------------------------------------------------------------
@@ -260,6 +304,12 @@ void OpenGLWidget::wheelEvent(QWheelEvent *_event){
     }
     else if(_event->delta() <0 ){
         m_modelPos.z-=ZOOM;
+    }
+    if(m_modelPos.z > 0){
+        m_modelPos.z = 0.0;
+    }
+    if(m_modelPos.z < -2650){
+        m_modelPos.z = -2650.0;
     }
 }
 //----------------------------------------------------------------------------------------------------------------------
@@ -317,9 +367,11 @@ float3 OpenGLWidget::getSeaBaseColour(){
 void OpenGLWidget::boatCheckBox(){
     if (m_renderBoat){
         m_renderBoat = false;
+        zoom = false;
     }
     else{
         m_renderBoat = true;
+        zoom = true;
     }
 }
 //----------------------------------------------------------------------------------------------------------------------
@@ -336,3 +388,11 @@ void OpenGLWidget::setSunStreakWidth(double _width){
     m_oceanGrid->setSunStreakWidth(_width);
 }
 //----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::setPan(){
+    if (m_pan){
+        m_pan = false;
+    }
+    else if (!m_pan){
+        m_pan = true;
+    }
+}
