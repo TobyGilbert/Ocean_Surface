@@ -6,71 +6,12 @@
 #include <cufft.h>
 #include <glm/glm.hpp>
 #include <complex>
-//#include <thrust/complex.h>
 #include <curand.h>
 #include <helper_functions.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <surface_functions.h>
 #include <helper_math.h>
-// ----------------------------------------------------------------------------------------------------------------------------------------
-/// @brief Uses Gerstner's equation for generating waves on a regular grid
-/// @param d_heightPointer An OpenGL buffer for storing the position information for the vertices on the grid
-/// @param d_normalPointer An OpenGL buffer for storing vertex normals
-/// @param d_wavesPointer An OpenGL buffer for storing wave information
-/// @param _time The current simulatation time
-/// @param _res The resolution of the simulation grid
-/// @param _numWaves The number of waves in the simulation
-// ----------------------------------------------------------------------------------------------------------------------------------------
-__global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave* d_wavesPointer,float _time, int _res, int _numWaves){
-
-    // For all waves calucalte the height of the wave at (u, v)
-    float u = float((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))));
-    float v = (float)((blockIdx.x * (1024.0/(float)_res)) + ceil(double(threadIdx.x / _res)) );
-
-    // Find the positions previosuly in the buffer
-    float xPrev = d_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].x;
-    float zPrev = d_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].z;
-
-    float waveX = 0;
-    float waveY = 0;
-    float waveZ = 0;
-    float waveL = 0;
-    float waveR = 0;
-    float waveU = 0;
-    float waveD = 0;
-
-    // Tessendof
-    for (int i=0; i<_numWaves; i++){
-        // Calcualte the x position
-        float w = sqrt(double(9.81 * d_wavesPointer[i].D.length()));
-        glm::vec2 dir = glm::normalize(d_wavesPointer[i].D);
-        waveX += float(dir.x * float(d_wavesPointer[i].A * sin(glm::dot(d_wavesPointer[i].D, glm::vec2(u, v)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        waveZ += float(dir.y * float(d_wavesPointer[i].A * sin(glm::dot(d_wavesPointer[i].D, glm::vec2(u, v)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        // Calculate the y position
-        waveY += float(d_wavesPointer[i].A * cos(double(glm::dot(d_wavesPointer[i].D, glm::vec2(u, v)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        // Calculate the normals
-        waveL += float(d_wavesPointer[i].A * cos(double(glm::dot(d_wavesPointer[i].D, glm::vec2(u-1.0, v)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        waveR += float(d_wavesPointer[i].A * cos(double(glm::dot(d_wavesPointer[i].D, glm::vec2(u+1.0, v)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        waveU += float(d_wavesPointer[i].A * cos(double(glm::dot(d_wavesPointer[i].D, glm::vec2(u, v-1.0)) - w * _time + d_wavesPointer[i].phaseConstant)));
-        waveD += float(d_wavesPointer[i].A * cos(double(glm::dot(d_wavesPointer[i].D, glm::vec2(u, v+1.0)) - w * _time + d_wavesPointer[i].phaseConstant)));
-    }
-
-    d_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].x = xPrev - waveX;
-    d_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].z = zPrev - waveZ;
-    d_heightPointer[(blockIdx.x * blockDim.x) + threadIdx.x].y = waveY*50;
-
-    glm::vec3 N;
-    N.x = waveL*50 - waveR*50;
-    N.y = 1.0;
-    N.z = waveD*50 - waveU*50;
-    N.x = N.x /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
-    N.y = N.y /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
-    N.z = N.z /sqrt(N.x*N.x + N.y*N.y + N.z * N.z);
-
-    d_normalPointer[(blockIdx.x * blockDim.x) + threadIdx.x] = N;
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
 /// @brief Given a time you can create a field of frequency amplitudes
 /// @param d_h0Pointer An OpenGL buffer which stores a set of amplitudes and phases at time zero
 /// @param d_htPointer An OpenGL buffer for outputting the frequency amplitude field
@@ -151,12 +92,15 @@ __global__ void height(float3* d_position,  float2* d_height, float2* d_chopX, f
     float xDisp = _choppiness * (d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
     float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
     float height =  ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) / 255.0f;
-    float3 newPos = make_float3(prevX+xDisp, height, prevZ+zDisp);
+    float newX = prevX +xDisp;
+    float newZ = prevZ + zDisp;
 
-    d_position[(blockIdx.x * blockDim.x) + threadIdx.x] = newPos;
+    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x = newX;
+    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].y =height;
+    d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z = newZ;
 }
 
-__global__ void calculateNormals(float3* d_position, float3* d_normals, int _res, float _scale){
+__global__ void calculateNormals(float3* d_position, float3* d_normals, int _res){
 
     float3 norm = make_float3(0.0, 0.0, 0.0);
     float3 posL, posR, posD, posU;
@@ -253,18 +197,13 @@ void updateFrequencyDomain(float2 *d_h0, float2 *d_ht, float _time, int _res){
     frequencyDomain<<<numBlocks, 1024>>>(d_h0, d_ht, _time, _res);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void updateGerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave *d_waves, float _time, int _res, int _numWaves){
-    int numBlocks =( _res * _res )/ 1024;
-    gerstner<<<numBlocks, 1024>>>(d_heightPointer, d_normalPointer, d_waves,  _time, _res, _numWaves);
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
 void updateHeight(float3* d_position, float3* d_norms, float2* d_height, float2* d_chopX, float2* d_chopZ, float _choppiness, int _res, float _scale){
     int numBlocks =( _res * _res )/ 1024;
     height<<<numBlocks, 1024>>>(d_position, d_height, d_chopX, d_chopZ, _choppiness,  _res, _scale);
 
     cudaThreadSynchronize();
 
-    calculateNormals<<<numBlocks, 1024>>>(d_position, d_norms, _res, _scale);
+    calculateNormals<<<numBlocks, 1024>>>(d_position, d_norms, _res);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
 void addChoppiness(float2* d_Heights, float2* d_chopX, float2* d_chopZ, int _res, float2 _windDirection){

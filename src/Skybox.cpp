@@ -57,8 +57,8 @@ void Skybox::loadCubeMap(std::string _pathToFile, GLint _activeTexture){
 //-------------------------------------------------------------------------------------------------------------------------
 void Skybox::createShader(){
     m_shaderProgram = new ShaderProgram();
-    m_vertShader = new Shader("shaders/cubeMapVert.glsl", GL_VERTEX_SHADER);
-    m_fragShader =  new Shader("shaders/cubeMapFrag.glsl", GL_FRAGMENT_SHADER);
+    m_vertShader = new Shader("shaders/CubeMapVert.glsl", GL_VERTEX_SHADER);
+    m_fragShader =  new Shader("shaders/CubeMapFrag.glsl", GL_FRAGMENT_SHADER);
     m_shaderProgram->attachShader(m_vertShader);
     m_shaderProgram->attachShader(m_fragShader);
     m_shaderProgram->bindFragDataLocation(0, "fragColour");
@@ -68,12 +68,12 @@ void Skybox::createShader(){
     delete m_vertShader;
     delete m_fragShader;
 
-    loadCubeMap("textures/lake2", 6);
+    loadCubeMap("textures/lake2", 0);
 
     m_sunPosLoc = m_shaderProgram->getUniformLoc("sunPos");
     GLuint cubeMapLoc = m_shaderProgram->getUniformLoc("cubeMapTex");
 
-    glUniform1i(cubeMapLoc, 6);
+    glUniform1i(cubeMapLoc, 0);
     glUniform3f(m_sunPosLoc, m_sunPos.x, m_sunPos.y, m_sunPos.z);
 }
 //-------------------------------------------------------------------------------------------------------------------------
