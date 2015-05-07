@@ -1,5 +1,5 @@
 #include "ShaderUtils.h"
-
+//-------------------------------------------------------------------------------------------------------------------------
 GLuint shaderUtils::createShaderFromFile(const GLchar *path, GLenum shaderType){
    GLuint shaderID = glCreateShader(shaderType);
 
@@ -37,3 +37,4 @@ GLuint shaderUtils::createShaderFromFile(const GLchar *path, GLenum shaderType){
 
    return shaderID;
 }
+//-------------------------------------------------------------------------------------------------------------------------

@@ -30,7 +30,7 @@ SOURCES += \
     src/Ocean.cu \
     src/OceanGrid.cpp \
     src/Skybox.cpp \
-    src/Sun.cpp
+    src/Boat.cpp
 
 SOURCES -= src/Ocean.cu
 CUDA_SOURCES += src/Ocean.cu
@@ -49,9 +49,9 @@ HEADERS += \
     include/CudaUtils.h \
     include/Ocean.h \
     include/OceanGrid.h \
+    include/MathsUtils.h \
     include/Skybox.h \
-    include/Sun.h \
-    include/MathsUtils.h
+    include/Boat.h
 
 # use this to suppress some warning from boost
 QMAKE_CXXFLAGS_WARN_ON += "-Wno-unused-parameter"
@@ -103,7 +103,7 @@ CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
 cuda.input = CUDA_SOURCES
 cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o
 
-cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -G -gencode arch=compute_20,code=sm_20 -c $$NVCCFLAGS $$CUDA_INC $$LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -G -gencode arch=compute_30,code=sm_30 -c $$NVCCFLAGS $$CUDA_INC $$LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
 
 cuda.dependency_type = TYPE_C
 cuda.depend_command = $$CUDA_DIR/bin/nvcc -g -G -M $$CUDA_INC $$NVCCFLAGS ${QMAKE_FILE_NAME}
@@ -150,5 +150,12 @@ OTHER_FILES += \
     textures/miramar_posy.jpg \
     textures/miramar_posz.jpg \
     shaders/CubeMapFrag.glsl \
-    shaders/CubeMapVert.glsl
+    shaders/CubeMapVert.glsl \
+    shaders/clippedPhongVert.glsl \
+    textures/lake2_negx.jpg \
+    textures/lake2_negy.jpg \
+    textures/lake2_negz.jpg \
+    textures/lake2_posx.jpg \
+    textures/lake2_posy.jpg \
+    textures/lake2_posz.jpg
 

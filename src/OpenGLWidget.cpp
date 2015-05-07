@@ -1,11 +1,12 @@
 #include "OpenGLWidget.h"
 #include <QGuiApplication>
+#include <QColorDialog>
 #include <iostream>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cuda_runtime.h>
 #include <sys/time.h>
-
-
+#include <QTimer>
+//-------------------------------------------------------------------------------------------------------------------------
 const static float INCREMENT= 2.0;
 const static float ZOOM = 50;
 OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidget(_format,_parent){
@@ -20,14 +21,13 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     this->resize(_parent->size());
 
-    m_sunPos = glm::vec3(0.0, 20.0, -500.0);
+    m_sunPos = glm::vec3(0.0, 10.0, -50.0);
 }
 //----------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::~OpenGLWidget(){
     delete m_cam;
     delete m_oceanGrid;
     delete m_skybox;
-    delete m_sun;
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::initializeGL(){
@@ -39,11 +39,14 @@ void OpenGLWidget::initializeGL(){
     }
 #endif
 
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // enable depth testing for drawing
     glEnable(GL_DEPTH_TEST);
     // enable multisampling for smoother drawing
     glEnable(GL_MULTISAMPLE);
+    // enable so we can use clipping in the shader
+    glEnable(GL_CLIP_DISTANCE0);
+
 
     // as re-size is not explicitly called we need to do this.
     glViewport(0,0,width(),height());
@@ -54,18 +57,22 @@ void OpenGLWidget::initializeGL(){
     // Initialize the camera
     m_cam = new Camera(glm::vec3(0.0, 100.0, 100.0));
 
-    m_oceanGrid = new OceanGrid(256, 500, 500);
+    m_oceanGrid = new OceanGrid(128, 500, 500);
 
     m_skybox = new Skybox();
+    m_renderSkyBox = true;
 
-    m_sun = new Sun();
-
-//    m_boat = new ModelLoader("models/yacht.obj");
+    m_boat = new Boat("models/boat.obj", "textures/boat.jpg");
+    m_renderBoat = false;
 
     genFBOs();
 
-    startTimer(0);
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateGL()));
+    timer->start(1000/30); // Update every 1/30sec
+
 }
+//-------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::genFBOs(){
     // Gen framebuffer
     glGenFramebuffers(1, &m_reflectFBO);
@@ -106,26 +113,33 @@ void OpenGLWidget::renderReflections(){
     m_mouseGlobalTX[3][2] = m_modelPos.z;
     m_modelMatrix = m_mouseGlobalTX;
 
-    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(50000.0, -50000.0, 50000.0));
+    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(10000.0, -10000.0, 10000.0));
     m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_skybox->render();
+
+    if (m_renderBoat){
+        m_modelMatrix= m_mouseGlobalTX;
+        m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5.0, -5.0,5.0));
+        m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, 3.0, 0.0));
+        m_boat->loadMatricesToShaderClipped(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+        m_boat->render();
+    }
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
+
     // Set the sun Position
     m_oceanGrid->setSunPos(m_sunPos);
-    struct timeval tim;
-    gettimeofday(&tim, NULL);
-    double start = tim.tv_sec+(tim.tv_usec * 1.0e-6);
+    m_skybox->setSunPos(m_sunPos);
 
     updateTimer(m_oceanGrid->getTime());
+
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectFBO);
     renderReflections();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glViewport(0, 0, width()*devicePixelRatio(), height()*devicePixelRatio());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //Initialise the model matrix
 
     glm::mat4 rotx;
     glm::mat4 roty;
@@ -139,28 +153,24 @@ void OpenGLWidget::paintGL(){
     m_mouseGlobalTX[3][2] = m_modelPos.z;
     m_modelMatrix = m_mouseGlobalTX;
 
-    m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, -20.0, 0.0));
+    if (m_renderSkyBox){
+        m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(10000.0, 10000.0, 10000.0));
+        m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+        m_skybox->render();
+    }
 
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    m_modelMatrix = m_mouseGlobalTX;
+    m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, -20.0, 0.0));
     m_oceanGrid->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_oceanGrid->render();
 
-    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(50000.0, 50000.0, 50000.0));
-    m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
-    m_skybox->render();
-
-    m_modelMatrix = m_mouseGlobalTX;
-    m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(10.0, 10.0, 10.0));
-    m_modelMatrix = glm::translate(m_modelMatrix, m_sunPos);
-    m_sun->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
-    m_sun->render();
-
-//    m_boat->render();
-
-    gettimeofday(&tim, NULL);
-    double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);
-
-    updateFPS(1.0 / (now - start));
+    if(m_renderBoat){
+        m_modelMatrix= m_mouseGlobalTX;
+        m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(5.0, 5.0, 5.0));
+        m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, -3.0, 0.0));
+        m_boat->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
+        m_boat->render();
+    }
 }
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::keyPressEvent(QKeyEvent *_event){
@@ -257,26 +267,24 @@ void OpenGLWidget::wheelEvent(QWheelEvent *_event){
         m_modelPos.z-=ZOOM;
     }
 }
-//------------------------------------------------------------------------------------------------------------------------------------
-void OpenGLWidget::timerEvent(QTimerEvent *_event){
-    updateGL();
-}
-
+//----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::updateChoppiness(int value){
     m_oceanGrid->updateChoppiness((float)value/100.0);
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::updateWindDirX(double _x){
     m_oceanGrid->setWindDirX(_x);
 }
+//----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::updateWindDirY(double _y){
     m_oceanGrid->setWindDirY(_y);
 }
+//----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::resetSim(){
     m_oceanGrid->resetSim();
 }
-
-void OpenGLWidget::changeResolution(QString _res){
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::updateResolution(QString _res){
     if(_res == QString("128x128")){
         m_oceanGrid->setResolution(128);
     }
@@ -290,3 +298,43 @@ void OpenGLWidget::changeResolution(QString _res){
         m_oceanGrid->setResolution(1024);
     }
 }
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::updateAmplitude(double _value){
+    m_oceanGrid->setAmplitude(_value);
+}
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::updateBaseColour(QColor _colour){
+    m_oceanGrid->setSeaBaseCol(_colour);
+}
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::updateTopColour(QColor _colour){
+    m_oceanGrid->setSeaTopCol(_colour);
+}
+//----------------------------------------------------------------------------------------------------------------------
+// Bad way to do this should be improved!!
+float3 OpenGLWidget::getSeaTopColour(){
+    return m_oceanGrid->getSeaTopColour();
+}
+//----------------------------------------------------------------------------------------------------------------------
+float3 OpenGLWidget::getSeaBaseColour(){
+    return m_oceanGrid->getSeaBaseColour();
+}
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::boatCheckBox(){
+    if (m_renderBoat){
+        m_renderBoat = false;
+    }
+    else{
+        m_renderBoat = true;
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::skyboxCheckBox(){
+    if (m_renderSkyBox){
+        m_renderSkyBox = false;
+    }
+    else{
+        m_renderSkyBox = true;
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------

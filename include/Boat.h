@@ -1,108 +1,104 @@
 /** @addtogroup OceanFFTStandAlone */
 /*@{*/
-
-#ifndef CAMERA_H
-#define CAMERA_H
 //----------------------------------------------------------------------------------------------------------------------
-/// @class Camera
-/// @author Toby Gilbert
-/// @brief This is a class to manage our OpenGL matrices
-//----------------------------------------------------------------------------------------------------------------------
-#ifdef DARWIN
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glew.h>
-#include <GL/gl.h>
-#endif
-//----------------------------------------------------------------------------------------------------------------------
-#include <iostream>
-#include <cmath>
+#ifndef BOAT_H
+#define BOAT_H
 //----------------------------------------------------------------------------------------------------------------------
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 //----------------------------------------------------------------------------------------------------------------------
-class Camera{
-    //----------------------------------------------------------------------------------------------------------------------
+#include "ShaderProgram.h"
+#include "ModelLoader.h"
+#include "Texture.h"
+//----------------------------------------------------------------------------------------------------------------------
+class Boat{
 public:
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Constructor
-    /// @param _pos the position of the camera in world space
     //----------------------------------------------------------------------------------------------------------------------
-    Camera(glm::vec3 _pos);
+    Boat(std::string _model, std::string _texture);
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Destructor
     //----------------------------------------------------------------------------------------------------------------------
-    ~Camera();
+    ~Boat();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the position of the camera
-    /// @param _position the new position of the camera
+    /// @brief Initialises the boat obj model
     //----------------------------------------------------------------------------------------------------------------------
-    void setPosition(glm::vec3 _position);
+    void initialise(std::string _model);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Changes the position the camera is looking at
-    /// @param _position the position of the camera
-    /// @param _center the new lookat position
-    /// @param _up a vector for the up axis
+    /// @brief Load the matrices to the shader for drawing
+    /// @param _modelMatrix the model matrix
+    /// @param _viewMatrix the view matrix
+    /// @param _projectionMatrix the projection matrix
     //----------------------------------------------------------------------------------------------------------------------
-    void lookAt(glm::vec3 _position, glm::vec3 _center, glm::vec3 _up);
+    void loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatrix, glm::mat4 _projectionMatrix);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Returns the view matrix
-    /// @return m_viewMatrix the view matrix
+    /// @brief Load the matrices to the shader for drawing a the boat using a clipping plane
+    /// @param _modelMatrix the model matrix
+    /// @param _viewMatrix the view matrix
+    /// @param _projectionMatrix the projection matrix
     //----------------------------------------------------------------------------------------------------------------------
-    inline glm::mat4 getViewMatrix(){return m_viewMatrix;}
+    void loadMatricesToShaderClipped(glm::mat4 _modelMatrix, glm::mat4 _viewMatrix, glm::mat4 _projectionMatrix);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets a new projection matrix
-    /// @param _fov the field of view
-    /// @param _aspect the aspect ratio (width/height of the window)
-    /// @param _near the near clipping distance
-    /// @param _far the far clipping distance
+    /// @brief Renders the boat obj model
     //----------------------------------------------------------------------------------------------------------------------
-    void setProjectionMatrix(float _fov, float _aspect, float _near, float _far);
+    void render();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Returns the projection matrix
-    /// @return m_projectionMatrix the projection matrix
+    /// @brief Update the boat bobbing action
     //----------------------------------------------------------------------------------------------------------------------
-    inline glm::mat4 getProjectionMatrix(){return m_projectionMatrix;}
-    //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the shape of the camera using an aspect ratio
-    /// @param _aspect an aspect ratio
-    //----------------------------------------------------------------------------------------------------------------------
-    void setShape(float _aspect);
-    //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the shape of the camera using a width and height
-    //----------------------------------------------------------------------------------------------------------------------
-    void setShape(float _w, float _h);
+    void update();
     //----------------------------------------------------------------------------------------------------------------------
 private:
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The cameras position in world space
+    /// @brief Creates the shader used to draw the boat model
     //----------------------------------------------------------------------------------------------------------------------
-    glm::vec3 m_position;
+    void createShader(std::string _texture);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The up direction
+    /// @brief The shader program used to draw the boat model
     //----------------------------------------------------------------------------------------------------------------------
-    glm::vec3 m_up;
+    ShaderProgram* m_shaderProgram;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The projection matrix
+    /// @brief A vertex shader
     //----------------------------------------------------------------------------------------------------------------------
-    glm::mat4 m_projectionMatrix;
+    Shader* m_vertShader;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The view matrix
+    /// @brief A fragment shader
     //----------------------------------------------------------------------------------------------------------------------
-    glm::mat4 m_viewMatrix;
+    Shader* m_fragShader;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The aspect ratio
+    /// @brief The shader program used to draw the boat model with a clipping plane
     //----------------------------------------------------------------------------------------------------------------------
-    float m_aspect;
+    ShaderProgram* m_shaderProgramClipped;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The field of view
+    /// @brief A vertex shader for shading with a clipping plane
     //----------------------------------------------------------------------------------------------------------------------
-    float m_fov;
+    Shader* m_vertShaderClipped;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief An object used for loading the obj file into a vertex array object
+    //----------------------------------------------------------------------------------------------------------------------
+    ModelLoader* m_model;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A wood texture used to texture the boat
+    //----------------------------------------------------------------------------------------------------------------------
+    Texture* m_tex;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A angle of rotation to simulate a bobbing motion
+    //----------------------------------------------------------------------------------------------------------------------
+    float m_angle;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A boolean to dictate the direction the boat is rotating
+    //----------------------------------------------------------------------------------------------------------------------
+    bool m_forwards;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief The translation in the y axis for increase the bobbing effect
+    //----------------------------------------------------------------------------------------------------------------------
+    float m_yTrans;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief A boolean to dictate the direction the boat is translating in the y axis
+    //----------------------------------------------------------------------------------------------------------------------
+    bool m_upwards;
     //----------------------------------------------------------------------------------------------------------------------
 };
 
-#endif // CAMERA_H
-
+#endif
 /*@}*/

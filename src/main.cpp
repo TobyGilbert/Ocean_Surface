@@ -9,14 +9,12 @@
 #include <QApplication>
 #include <CudaUtils.h>
 #include <cuda_runtime.h>
-
+//-------------------------------------------------------------------------------------------------------------------------
 //#define FULL_SCREEN
-
+//-------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char **argv){
+    // Print information regarding our device
     CudaUtils::printDevices();
-
-//    float *gpuFloatArray;
-//    cudaMalloc(&gpuFloatArray, 128*sizeof(float));
 
     QApplication app(argc,argv);
     MainWindow w;
@@ -28,3 +26,4 @@ int main(int argc, char **argv){
     w.show();
     app.exec();
 }
+//-------------------------------------------------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 /// @author Toby Gilbert
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 #include "OceanGrid.h"
 #include "Ocean.h"
 #include <glm/gtc/matrix_inverse.hpp>
@@ -16,9 +16,9 @@
 #else
 #include <libnoise/noise.h>
 #endif
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 double startTime = 0.0;
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
     m_resolution = _resolution;
     m_width = _width;
@@ -27,24 +27,31 @@ OceanGrid::OceanGrid(int _resolution, int _width, int _depth){
     m_windDirection = make_float2(0.0, 0.5);
     m_L = (m_windSpeed*m_windSpeed) / 9.81;
     m_l = 1.0 / m_L;
-    m_A = 100.0;
+    m_A = 5.0;
     m_sunPos = glm::vec3(0.0, 20.0, -500.0);
     m_choppiness = 0.02;
-    m_numLayers = 1;
+    m_numLayers = 10;
+    m_seaBaseColour = make_float3(0.1,0.19,0.22);
+    m_seaTopColour = make_float3(0.8,0.9,0.6);
+    m_sunStreak = 200.0;
+//    m_seaBaseColour = make_float3( 54.0/255.0, 60.0/255.0, 74.0/255.0);
+//    m_seaTopColour = make_float3(  127.0/255.0, 160.0/255.0, 205.0/255.0);
     createShader();
     initialise();
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 OceanGrid::~OceanGrid(){
     delete m_shaderProgram;
+    delete m_dudvTex;
     cudaFree(d_Ht);
     cudaFree(d_H0);
     cudaFree(d_Heights);
     cudaFree(d_chopX);
     cudaFree(d_chopZ);
+    free(h_Ht);
     free(h_H0);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createShader(){
     m_shaderProgram = new ShaderProgram();
     m_vertShader = new Shader("shaders/OceanVert.glsl", GL_VERTEX_SHADER);
@@ -58,9 +65,7 @@ void OceanGrid::createShader(){
     delete m_vertShader;
     delete m_fragShader;
 
-    loadCubeMap("textures/miramar", 0);
-
-   // createPerlinTexture(2);
+    // createPerlinTexture(2);
 
     // Create a texture for storing local reflections
     glGenTextures(1, &m_reflectTex);
@@ -69,35 +74,42 @@ void OceanGrid::createShader(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // dudv map
+    m_dudvTex = new Texture("textures/water_dudv.jpg");
+    m_dudvTex->bind(1);
+
     // Vertex Shader uniforms
     GLuint cameraPosLoc = m_shaderProgram->getUniformLoc("cameraPosition");
     glUniform4f(cameraPosLoc, 0.0, 100.0, 100.0, 1.0);
 
     // Fragment Shader uniforms
+    m_timeLoc = m_shaderProgram->getUniformLoc("time");
+    m_seaBaseColLoc = m_shaderProgram->getUniformLoc("seaBaseColour");
+    m_seaTopColLoc = m_shaderProgram->getUniformLoc("seaTopColour");
     m_sunPositionLoc = m_shaderProgram->getUniformLoc("sun.position");
-    GLuint reflectLoc = m_shaderProgram->getUniformLoc("enviromap");
-    GLuint sunStrengthLoc = m_shaderProgram->getUniformLoc("sun.strength");
-    GLuint sunColourLoc = m_shaderProgram->getUniformLoc("sun.colour");
-    GLuint sunShininessLoc = m_shaderProgram->getUniformLoc("sun.shininess");
+    m_sunStreakLoc = m_shaderProgram->getUniformLoc("sun.streak");
+    GLuint reflectLoc = m_shaderProgram->getUniformLoc("reflectTex");
     GLuint enviromapLoc = m_shaderProgram->getUniformLoc("envirMap");
-    GLuint fftTexLoc = m_shaderProgram->getUniformLoc("fftTexture");
-    GLuint perlinLoc = m_shaderProgram->getUniformLoc("perlinTexture");
     GLuint numLayersLoc = m_shaderProgram->getUniformLoc("numLayers");
+    GLuint dudvMapLoc = m_shaderProgram->getUniformLoc("dudvTex");
+    GLuint fogFarLoc = m_shaderProgram->getUniformLoc("fogFarDist");
+    GLuint fogNearLoc = m_shaderProgram->getUniformLoc("fogNearDist");
 
-
+    glUniform1f(m_timeLoc, 0.0);
+    glUniform3f(m_seaBaseColLoc, m_seaBaseColour.x, m_seaBaseColour.y, m_seaBaseColour.z);
+    glUniform3f(m_seaTopColLoc,m_seaTopColour.x, m_seaTopColour.y, m_seaTopColour.z);
     glUniform3f(m_sunPositionLoc, m_sunPos.x, m_sunPos.y, m_sunPos.z);
+    glUniform1f(m_sunStreakLoc, m_sunStreak);
     glUniform1i(reflectLoc, 0);
-    glUniform1f(sunStrengthLoc, 2.0);
-    glUniform3f(sunColourLoc, 239.0/255.0, 238.0/255.0, 179.0/255.0);
-    glUniform1f(sunShininessLoc, 1.0);
     glUniform1i(enviromapLoc, 0);
-    glUniform1i(fftTexLoc, 1);
-    glUniform1i(perlinLoc, 2);
     glUniform1i(numLayersLoc, m_numLayers);
+    glUniform1i(dudvMapLoc, 1);
+    glUniform1f(fogNearLoc, 750.0);
+    glUniform1f(fogFarLoc, 3000.0);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createPerlinTexture(int _activeTexture){
     // Create a noise texture used to hide tiling of ocean
     // Noise texture generation taken from chapter 8 of GLSL Cookbook 4.0
@@ -146,45 +158,7 @@ void OceanGrid::createPerlinTexture(int _activeTexture){
 
 //    delete [] data;
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::loadCubeMap(std::string _pathToFile, GLint _activeTexture){
-    glActiveTexture(GL_TEXTURE0+_activeTexture);
-    GLuint texID;
-
-    glGenTextures(1, &texID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
-    const char * suffixes[] = { "posx", "negx", "posy",
-       "negy", "posz", "negz" };
-    GLuint targets[] = {
-       GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-       GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-       GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-       GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-       GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-       GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-    };
-
-    for (int i=0; i<6; i++){
-       GLuint texture;
-       glGenTextures(1, &texture);
-       glBindTexture(GL_TEXTURE_2D, texture);
-       std::string texName = std::string(_pathToFile) + "_" + suffixes[i] + ".jpg";
-
-       QString name = QString::fromUtf8(texName.c_str());
-       QImage *image = new QImage(name);
-       QImage tex = QGLWidget::convertToGLFormat(*image);
-       glTexImage2D(targets[i],0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, tex.bits());
-    }
-
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-//----------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createGrid(){
     std::vector<glm::vec3> vertices, normals;
 
@@ -265,7 +239,7 @@ void OceanGrid::createGrid(){
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 float OceanGrid::phillips(float2 _k){
     float kLen = sqrt(_k.x*_k.x + _k.y*_k.y);
     if (kLen == 0.0f){
@@ -274,21 +248,22 @@ float OceanGrid::phillips(float2 _k){
     float ph = ( exp( -1 / ( (kLen * m_L )*(kLen * m_L ) ))  / pow(kLen, 4) );
     ph *= m_A;
 
+
+    // Waves moving in the opposite direction to the wind get dampened
+    if (((_k.x * m_windDirection.x) + (_k.y * m_windDirection.y))  < 0.0){
+        ph *= 0.05;
+    }
+
     // | k . w |^2
     float kw =  dot(normalise(_k), normalise(m_windDirection));
     ph *= kw * kw;
 
-    // Waves moving in the opposite direction to the wind get dampened
-    if (((_k.x * m_windDirection.x) + (_k.y * m_windDirection.y))  < 0.0){
-        ph *= 0.00;
-    }
-
     return ph;
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 // gaussian random number generator sourced from - NVIDIA OceanFFT
 // Generates Gaussian random number with mean 0 and standard deviation 1.
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 float OceanGrid::gauss(){
     float u1 = rand() / (float)RAND_MAX;
     float u2 = rand() / (float)RAND_MAX;
@@ -300,7 +275,7 @@ float OceanGrid::gauss(){
 
     return sqrtf(-2 * logf(u1)) * cosf(2*M_PI * u2);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createH0(){
     // Assign memory on the host side and device to store h0 and evaluate
     int gridSize = m_resolution*m_resolution;
@@ -313,16 +288,13 @@ void OceanGrid::createH0(){
             float2 h;
             h.x = (1.0/sqrt(2.0)) * gauss() * sqrt(phillips(k));
             h.y = (1.0/sqrt(2.0)) * gauss() * sqrt(phillips(k));
-//            if (h != h ){
-//                std::cout<<"hx: "<<h.x<<" hy: "<<h.y<<" m: "<<m<<" n: "<<n<<std::endl;
-//            }
             h_H0[((n+(m_resolution/2)) + ((m+(m_resolution/2)) * m_resolution))] = h;
         }
     }
 
     checkCudaErrors(cudaMemcpy(d_H0, h_H0, gridSize*sizeof(glm::vec2), cudaMemcpyHostToDevice));
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::initialise(){
     // Create our VAO and vertex buffers
     glGenVertexArrays(1, &m_VAO);
@@ -360,7 +332,6 @@ void OceanGrid::initialise(){
     h_Ht = (float2*)malloc(m_resolution*m_resolution*sizeof(float2));
     checkCudaErrors(cudaMalloc((void**)&d_Ht, m_resolution*m_resolution*sizeof(float2)));
 
-    h_Heights = (float2*)malloc(m_resolution*m_resolution*sizeof(float2));
     checkCudaErrors(cudaMalloc((void**)&d_Heights, m_resolution*m_resolution*sizeof(float2)));
 
     int gridSize = m_resolution*m_resolution;
@@ -369,21 +340,6 @@ void OceanGrid::initialise(){
 
     checkCudaErrors(cudaMalloc((void**)&d_chopX, gridSize*sizeof(float2)));
     checkCudaErrors(cudaMalloc((void**)&d_chopZ, gridSize*sizeof(float2)));
-
-
-    // Create a texture to store the heights after FFT
-    // This is needed because we are then going to combine
-    // the FFT height with a perlin noise function to
-    // hide tiling
-//    glGenTextures(1, &m_fftHeightTex);
-//    glBindTexture(GL_TEXTURE_2D, m_fftHeightTex);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_resolution, m_resolution, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-//    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_resourceHeightMap, m_fftHeightTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsNone));
-
 
     // Create a set of time dependent amplitude and phases
     createH0();
@@ -398,7 +354,7 @@ void OceanGrid::initialise(){
     gettimeofday(&tim, NULL);
     startTime = tim.tv_sec+(tim.tv_usec * 1.0e-6);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatrix, glm::mat4 _projectionMatrix){
     m_shaderProgram->use();
     GLuint modelViewLoc = m_shaderProgram->getUniformLoc("modelViewMatrix");
@@ -415,8 +371,13 @@ void OceanGrid::loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatr
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(_projectionMatrix));
     glUniformMatrix4fv(modelViewProjectionLoc, 1, GL_FALSE, glm::value_ptr(modelViewProjectionMatrix));
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::update(){
+
+    // Set the sea colours in the shader which can be set in the GUI
+    glUniform3f(m_seaBaseColLoc, m_seaBaseColour.x, m_seaBaseColour.y, m_seaBaseColour.z);
+    glUniform3f(m_seaTopColLoc, m_seaTopColour.x, m_seaTopColour.y, m_seaTopColour.z);
+
     // Set the direction of the sun
     glUniform3f(m_sunPositionLoc, m_sunPos.x, m_sunPos.y, m_sunPos.z);
 
@@ -424,6 +385,7 @@ void OceanGrid::update(){
     struct timeval tim;
     gettimeofday(&tim, NULL);
     double now = tim.tv_sec+(tim.tv_usec * 1.0e-6);
+    glUniform1f(m_timeLoc, now);
 
     // Set the time in the shader
     GLuint timeLoc = m_shaderProgram->getUniformLoc("time");
@@ -472,46 +434,28 @@ void OceanGrid::update(){
     // Bind our local reflections texture to acitive texture 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_reflectTex);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, m_perlinTex);
-
+    glActiveTexture(GL_TEXTURE1);
+    m_dudvTex->bind(1);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::render(){
     update();
     glBindVertexArray(m_VAO);
-    glPointSize(5.0);
+    glPointSize(3.0);
     glDrawElementsInstanced(GL_TRIANGLES , m_vertSize, GL_UNSIGNED_INT, 0, m_numTiles);
 
     glBindVertexArray(0);
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::moveSunLeft(){
-    m_sunPos.x -= 10.0;
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::moveSunRight(){
-    m_sunPos.x += 10.0;
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::moveSunDown(){
-    m_sunPos.y -= 10.0;
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::moveSunUp(){
-    m_sunPos.y += 10.0;
-}
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::updateChoppiness(float _choppiness){
     m_choppiness = _choppiness;
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::resetSim(){
     free(h_H0);
     cudaFree(d_H0);
     free(h_Ht);
     cudaFree(d_Ht);
-    free(h_Heights);
     cudaFree(d_Heights);
     cudaFree(d_chopX);
     cudaFree(d_chopZ);
@@ -521,24 +465,28 @@ void OceanGrid::resetSim(){
 
     initialise();
 }
-// ----------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::setResolution(int _resolution){
-    std::cout<<"res "<<_resolution<<std::endl;
     // Set out new resolution
     m_resolution = _resolution;
 
     // Free our memory so we can reinstantiate it at a new size
-    free(h_H0);
-    cudaFree(d_H0);
-    free(h_Ht);
-    cudaFree(d_Ht);
-    free(h_Heights);
-    cudaFree(d_Heights);
-    cudaFree(d_chopX);
-    cudaFree(d_chopZ);
-
-    glDeleteBuffers(1, &m_VBOverts);
-    glDeleteBuffers(1, &m_VBOnorms);
-
-    initialise();
+    resetSim();
 }
+//-------------------------------------------------------------------------------------------------------------------------
+void OceanGrid::setAmplitude(double _value){
+    // Set out new amplitude
+    m_A = _value;
+
+    // Free our memory so we can reinstantiate it with a new amplitude
+    resetSim();
+}
+//-------------------------------------------------------------------------------------------------------------------------
+void OceanGrid::setSeaBaseCol(QColor _col){
+    m_seaBaseColour = make_float3(_col.red()/255.0, _col.green()/255.0, _col.blue()/255.0);
+}
+//-------------------------------------------------------------------------------------------------------------------------
+void OceanGrid::setSeaTopCol(QColor _col){
+    m_seaTopColour = make_float3(_col.red()/255.0, _col.green()/255.0, _col.blue()/255.0);
+}
+//-------------------------------------------------------------------------------------------------------------------------

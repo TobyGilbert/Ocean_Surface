@@ -1,108 +1,87 @@
 /** @addtogroup OceanFFTStandAlone */
 /*@{*/
 
-#ifndef CAMERA_H
-#define CAMERA_H
-//----------------------------------------------------------------------------------------------------------------------
-/// @class Camera
-/// @author Toby Gilbert
-/// @brief This is a class to manage our OpenGL matrices
-//----------------------------------------------------------------------------------------------------------------------
-#ifdef DARWIN
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glew.h>
-#include <GL/gl.h>
-#endif
-//----------------------------------------------------------------------------------------------------------------------
-#include <iostream>
-#include <cmath>
+#ifndef __SKYBOX_H_
+#define __SKYBOX_H_
 //----------------------------------------------------------------------------------------------------------------------
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string>
 //----------------------------------------------------------------------------------------------------------------------
-class Camera{
-    //----------------------------------------------------------------------------------------------------------------------
+#include "Texture.h"
+#include "ShaderProgram.h"
+#include "ModelLoader.h"
+//----------------------------------------------------------------------------------------------------------------------
+/// @brief A class for creating a skybox object creating geometry and a cube map and managing its shader
+/// @author Toby Gilbert
+//----------------------------------------------------------------------------------------------------------------------
+class Skybox {
 public:
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Constructor
-    /// @param _pos the position of the camera in world space
+    /// @brief ctor
     //----------------------------------------------------------------------------------------------------------------------
-    Camera(glm::vec3 _pos);
+    Skybox();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Destructor
+    /// @brief dtor
     //----------------------------------------------------------------------------------------------------------------------
-    ~Camera();
+    ~Skybox();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the position of the camera
-    /// @param _position the new position of the camera
+    /// @brief Initialise the skybox
     //----------------------------------------------------------------------------------------------------------------------
-    void setPosition(glm::vec3 _position);
+    void initSkybox();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Changes the position the camera is looking at
-    /// @param _position the position of the camera
-    /// @param _center the new lookat position
-    /// @param _up a vector for the up axis
+    /// @brief Update varibale uniforms in the shader
     //----------------------------------------------------------------------------------------------------------------------
-    void lookAt(glm::vec3 _position, glm::vec3 _center, glm::vec3 _up);
+    void update();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Returns the view matrix
-    /// @return m_viewMatrix the view matrix
+    /// @brief Render function
     //----------------------------------------------------------------------------------------------------------------------
-    inline glm::mat4 getViewMatrix(){return m_viewMatrix;}
+    void render();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets a new projection matrix
-    /// @param _fov the field of view
-    /// @param _aspect the aspect ratio (width/height of the window)
-    /// @param _near the near clipping distance
-    /// @param _far the far clipping distance
+    /// @brief Create the skybox shader
     //----------------------------------------------------------------------------------------------------------------------
-    void setProjectionMatrix(float _fov, float _aspect, float _near, float _far);
+    void createShader();
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Returns the projection matrix
-    /// @return m_projectionMatrix the projection matrix
+    /// @brief Load the matrices to the shader
     //----------------------------------------------------------------------------------------------------------------------
-    inline glm::mat4 getProjectionMatrix(){return m_projectionMatrix;}
+    void loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatrix, glm::mat4 _projectionMatrix);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the shape of the camera using an aspect ratio
-    /// @param _aspect an aspect ratio
+    /// @brief Loads a cubemap into an active texture
     //----------------------------------------------------------------------------------------------------------------------
-    void setShape(float _aspect);
+    void loadCubeMap(std::string _pathToFile, GLint _activeTexture);
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Sets the shape of the camera using a width and height
+    /// @brief Sets the position of the sun
     //----------------------------------------------------------------------------------------------------------------------
-    void setShape(float _w, float _h);
+    void setSunPos(glm::vec3 _sunPos){m_sunPos = _sunPos;}
     //----------------------------------------------------------------------------------------------------------------------
 private:
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The cameras position in world space
+    /// @brief Skybox model
     //----------------------------------------------------------------------------------------------------------------------
-    glm::vec3 m_position;
+    ModelLoader *m_model;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The up direction
+    /// @brief Skybox shader program
     //----------------------------------------------------------------------------------------------------------------------
-    glm::vec3 m_up;
+    ShaderProgram *m_shaderProgram;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The projection matrix
+    /// @brief Skybox vertex shader
     //----------------------------------------------------------------------------------------------------------------------
-    glm::mat4 m_projectionMatrix;
+    Shader *m_vertShader;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The view matrix
+    /// @brief Skybox fragment shader
     //----------------------------------------------------------------------------------------------------------------------
-    glm::mat4 m_viewMatrix;
+    Shader *m_fragShader;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The aspect ratio
+    /// @brief A uniform for moving the sun position in the shader
     //----------------------------------------------------------------------------------------------------------------------
-    float m_aspect;
+    GLuint m_sunPosLoc;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief The field of view
+    /// @brief The position of the sun
     //----------------------------------------------------------------------------------------------------------------------
-    float m_fov;
+    glm::vec3 m_sunPos;
     //----------------------------------------------------------------------------------------------------------------------
 };
 
-#endif // CAMERA_H
-
+#endif
 /*@}*/

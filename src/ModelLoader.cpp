@@ -1,6 +1,6 @@
 #include "ModelLoader.h"
 #include <iostream>
-
+//-------------------------------------------------------------------------------------------------------------------------
 ModelLoader::ModelLoader(char *_fileName){
     Assimp::Importer import;
     const aiScene* scene = import.ReadFile(_fileName, aiProcess_GenSmoothNormals | aiProcess_Triangulate );
@@ -11,32 +11,32 @@ ModelLoader::ModelLoader(char *_fileName){
     }
     loadMesh(scene->mRootNode, scene);
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 ModelLoader::~ModelLoader(){
-    for (int i=0; i<m_meshes.size(); i++){
+    for (unsigned int i=0; i<m_meshes.size(); i++){
         delete m_meshes[i];
     }
     m_meshes.clear();
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 void ModelLoader::loadMesh(const aiNode* _node, const aiScene* _scene){
-    for(int i = 0; i < _node->mNumMeshes; i++){
+    for(unsigned int i = 0; i < _node->mNumMeshes; i++){
         aiMesh* mesh = _scene->mMeshes[_node->mMeshes[i]];
         processMesh(mesh);
     }
 
-    for(int i = 0; i < _node->mNumChildren; i++){
+    for(unsigned int i = 0; i < _node->mNumChildren; i++){
         loadMesh(_node->mChildren[i], _scene);
     }
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 void ModelLoader::processMesh(const aiMesh* _mesh){
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> texCoords;
     std::vector<GLuint> indices;
 
-    for(int i = 0; i <_mesh->mNumVertices; i++)
+    for(unsigned int i = 0; i <_mesh->mNumVertices; i++)
     {
         glm::vec3 tempVec;
 
@@ -66,10 +66,10 @@ void ModelLoader::processMesh(const aiMesh* _mesh){
         texCoords.push_back(glm::vec2(tempVec.x, tempVec.y));
     }
 
-    for(int i = 0; i < _mesh->mNumFaces; i++){
+    for(unsigned int i = 0; i < _mesh->mNumFaces; i++){
         aiFace face = _mesh->mFaces[i];
 
-        for(int j = 0; j < face.mNumIndices; j++){
+        for(unsigned int j = 0; j < face.mNumIndices; j++){
             indices.push_back(face.mIndices[j]);
         }
     }
@@ -77,13 +77,13 @@ void ModelLoader::processMesh(const aiMesh* _mesh){
     Mesh* mesh = new Mesh(&vertices, &normals, &texCoords, &indices);
     m_meshes.push_back(mesh);
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 void ModelLoader::render(){
-    for (int i=0; i<m_meshes.size(); i++){
+    for (unsigned int i=0; i<m_meshes.size(); i++){
         m_meshes[i]->render();
     }
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 Mesh::Mesh(std::vector<glm::vec3> *_vertices, std::vector<glm::vec3> *_normals, std::vector<glm::vec2> *_texCoords, std::vector<GLuint> *_indices){
     m_numIndices = _indices->size();
     std::vector <glm::vec3> verts = *_vertices;
@@ -121,7 +121,7 @@ Mesh::Mesh(std::vector<glm::vec3> *_vertices, std::vector<glm::vec3> *_normals, 
     glBindVertexArray(0);
 
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 Mesh::~Mesh(){
     glDeleteBuffers(1, &m_verticesVBO);
     glDeleteBuffers(1, &m_normalsVBO);
@@ -130,10 +130,11 @@ Mesh::~Mesh(){
 
     glDeleteVertexArrays(1, &m_VAO);
 }
-
+//-------------------------------------------------------------------------------------------------------------------------
 void Mesh::render(){
     glBindVertexArray(m_VAO);
 //    glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, 0);
     glDrawArrays(GL_TRIANGLES, 0, m_numIndices);
     glBindVertexArray(0);
 }
+//-------------------------------------------------------------------------------------------------------------------------

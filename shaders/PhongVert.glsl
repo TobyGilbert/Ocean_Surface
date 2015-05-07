@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 vertexPosition;
 layout (location = 1) in vec3 vertexNormal;
-//layout (location = 2) in vec2 texCoord;
+layout (location = 2) in vec2 texCoord;
 
 out vec4 position;
 out vec3 normal;
@@ -14,7 +14,7 @@ struct lightInfo{
 
 uniform lightInfo light;
 
-//out vec2 TexCoords;
+out vec2 TexCoords;
 
 uniform mat4 modelViewMatrix;
 uniform mat3 normalMatrix;
@@ -22,8 +22,8 @@ uniform mat4 modelViewProjectionMatrix;
 
 
 void main(){
-   //TexCoords = texCoord;
+   TexCoords = texCoord;
    normal = normalize(normalMatrix * vertexNormal);
-   position = modelViewMatrix * vec4(vertexPosition, 1.0);
+   position = vec4(1.0, 1.0, 1.0, 1.0);//modelViewMatrix * vec4(vertexPosition, 1.0);
    gl_Position = modelViewProjectionMatrix * vec4(vertexPosition,1.0);   
 }

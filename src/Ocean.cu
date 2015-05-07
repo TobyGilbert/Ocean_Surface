@@ -5,7 +5,7 @@
 #include <helper_cuda.h>
 #include <cufft.h>
 #include <glm/glm.hpp>
-#include <complex.h>
+#include <complex>
 //#include <thrust/complex.h>
 #include <curand.h>
 #include <helper_functions.h>
@@ -21,7 +21,6 @@
 /// @param _time The current simulatation time
 /// @param _res The resolution of the simulation grid
 /// @param _numWaves The number of waves in the simulation
-// ----------------------------------------------------------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------------------------------------------------------
 __global__ void gerstner(glm::vec3 *d_heightPointer,glm::vec3* d_normalPointer, wave* d_wavesPointer,float _time, int _res, int _numWaves){
 
@@ -85,9 +84,7 @@ __global__ void frequencyDomain(float2* d_h0Pointer, float2* d_htPointer, float 
     // A 2D vector to represent a position on the grid with constraits -(_res/2) <= k < (_res/2)
     float2 k;
     k.x = float((threadIdx.x - (_res * floor(double(threadIdx.x / _res)))) - (_res/2));
-//    printf("k.x %f\n", k.x);
     k.y = float(((blockIdx.x * (blockDim.x/_res)) + ceil(double(threadIdx.x / _res))) - (_res/2));
-//    printf("k.y %f\n", k.y);
     float kLen = sqrt(double(k.x*k.x + k.y*k.y));
 
     // Calculate the wave frequency
@@ -124,8 +121,6 @@ __global__ void frequencyDomain(float2* d_h0Pointer, float2* d_htPointer, float 
     hTilde.x= h.x + hStar.x;
     hTilde.y = h.y + hStar.y;
 
-//    printf("hTilde %f\n", hTilde.x);
-
     d_htPointer[(blockIdx.x * blockDim.x) + threadIdx.x].x = hTilde.x;
     d_htPointer[(blockIdx.x * blockDim.x) + threadIdx.x].y = hTilde.y;
 }
@@ -153,14 +148,10 @@ __global__ void height(float3* d_position,  float2* d_height, float2* d_chopX, f
     // Update the heights of the vertices
     float prevX = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].x;
     float prevZ = d_position[(blockIdx.x * blockDim.x) + threadIdx.x].z;
-//    float xDisp = /*_choppiness */ d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x;//  /_scale) * sign;
-   // float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
-//    float xDisp = 0.0;
-    float zDisp = 0.0;
+    float xDisp = _choppiness * (d_chopX[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
+    float zDisp = _choppiness * (d_chopZ[(blockIdx.x * blockDim.x) + threadIdx.x].x  /_scale) * sign;
     float height =  ((d_height[(blockIdx.x * blockDim.x) + threadIdx.x].x / _scale) * sign ) / 255.0f;
-    float3 newPos = make_float3(prevX, height, prevZ);
-
-    printf("new Pos %f %f %f \n", newPos.x, newPos.y, newPos.z);
+    float3 newPos = make_float3(prevX+xDisp, height, prevZ+zDisp);
 
     d_position[(blockIdx.x * blockDim.x) + threadIdx.x] = newPos;
 }
@@ -174,25 +165,25 @@ __global__ void calculateNormals(float3* d_position, float3* d_normals, int _res
         posL = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) - 1]);
     }
     else{
-        posL = make_float3(0.0, 0.0, 0.0);
+        posL = (d_position[_res]); // A position on a neighbouring tile
     }
     if (((blockIdx.x * blockDim.x) + threadIdx.x) <=(_res*_res)-2){
         posR = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) + 1]);
     }
     else{
-        posR = make_float3(0.0, 0.0, 0.0);
+        posR = d_position[_res*_res - _res]; // A position on a neighbouring tile
     }
     if (((blockIdx.x * blockDim.x) + threadIdx.x) >= _res){
         posU = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) - _res]);
     }
     else{
-        posU = make_float3(0.0, 0.0, 0.0);
+        posU = d_position[_res*_res-_res + threadIdx.x];
     }
     if (((blockIdx.x * blockDim.x) + threadIdx.x) <= (_res*_res)-_res-1){
         posD = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) + _res]);
     }
     else{
-        posD = make_float3(0.0, 0.0, 0.0);
+        posD = d_position[threadIdx.x];
     }
 
 
@@ -276,8 +267,8 @@ void updateHeight(float3* d_position, float3* d_norms, float2* d_height, float2*
     calculateNormals<<<numBlocks, 1024>>>(d_position, d_norms, _res, _scale);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------
-void addChoppiness(float2* d_Heights, float2* d_chopX, float2* d_chopZ, int _res, float2 _windSpeed){
+void addChoppiness(float2* d_Heights, float2* d_chopX, float2* d_chopZ, int _res, float2 _windDirection){
     int numBlocks =( _res * _res )/ 1024;
-    choppiness<<<numBlocks, 1024>>>(d_Heights, d_chopX, d_chopZ, _windSpeed);
+    choppiness<<<numBlocks, 1024>>>(d_Heights, d_chopX, d_chopZ, _windDirection);
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------

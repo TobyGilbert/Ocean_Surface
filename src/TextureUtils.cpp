@@ -1,7 +1,7 @@
 #include "TextureUtils.h"
 #include <QImage>
 #include <QGLWidget>
-
+//-------------------------------------------------------------------------------------------------------------------------
 GLuint TextureUtils::createTexture(const GLchar *path){
     GLuint texture;
     glGenTextures(1, &texture);
@@ -17,3 +17,4 @@ GLuint TextureUtils::createTexture(const GLchar *path){
     return texture;
 
 }
+//-------------------------------------------------------------------------------------------------------------------------

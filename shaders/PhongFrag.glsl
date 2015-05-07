@@ -2,7 +2,7 @@
 
 in vec4 position;
 in vec3 normal;
-//in vec2 TexCoords;
+in vec2 TexCoords;
 
 struct lightInfo{
    vec4 position;
@@ -16,11 +16,14 @@ uniform vec3 Ka;
 uniform vec3 Ks;
 uniform float shininess;
 
+uniform sampler2D tex;
+uniform mat4 modelViewMatrix;
+
 out vec4 fragColour;
 
 vec3 ads(){
    vec3 n = normalize(normal);
-   vec3 s = normalize(light.position - position).xyz;
+   vec3 s = normalize((modelViewMatrix * light.position) - position).xyz;
    vec3 v = normalize(vec3(-position));
    vec3 r = reflect(-s, n);
    vec3 h = normalize(v + s);
@@ -28,7 +31,7 @@ vec3 ads(){
 }
 
 void  main(){
-  fragColour = vec4(1.0, 1.0, 1.0, 1.0);
+  fragColour = vec4(ads()* texture(tex, TexCoords).xyz, 1.0);
 }
 
 
