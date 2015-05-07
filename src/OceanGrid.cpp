@@ -65,12 +65,10 @@ void OceanGrid::createShader(){
     delete m_vertShader;
     delete m_fragShader;
 
-    // createPerlinTexture(2);
-
     // Create a texture for storing local reflections
     glGenTextures(1, &m_reflectTex);
     glBindTexture(GL_TEXTURE_2D, m_reflectTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 1024, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -108,55 +106,6 @@ void OceanGrid::createShader(){
     glUniform1f(fogFarLoc, 3000.0);
 
     glBindTexture(GL_TEXTURE_2D, 0);
-}
-//-------------------------------------------------------------------------------------------------------------------------
-void OceanGrid::createPerlinTexture(int _activeTexture){
-    // Create a noise texture used to hide tiling of ocean
-    // Noise texture generation taken from chapter 8 of GLSL Cookbook 4.0
-//    glActiveTexture(GL_TEXTURE0 + _activeTexture);
-
-//    int width = 512;
-//    int height = 512;
-//    noise::module::Perlin perlinNoise;
-
-//    // Base frequency
-//    perlinNoise.SetFrequency(100.0);
-//    GLubyte *data = new GLubyte[width * height * 4];
-//    double xRange = 1.0;
-//    double yRange = 1.0;
-//    double xFactor = xRange / width;
-//    double yFactor = yRange / height;
-
-//    for (int oct = 0; oct < 4; oct++){
-//        perlinNoise.SetOctaveCount(oct+1);
-//        for (int i=0; i<width; i++){
-//            for (int j=0; j<height; j++){
-//                double x = xFactor * i;
-//                double y = yFactor * j;
-//                double z = 0.0;
-//                float val = (float)perlinNoise.GetValue(x, y, z);
-//                // Scale and translate it between 0 and 1
-//                val = (val + 1.0f) * 0.5f;
-//                // Clamp between 0 and 1
-//                val = val > 1.0f ? 1.0f : val;
-//                val = val < 0.0f ? 0.0f : val;
-//                // Store in texture
-//                data[((j * width + i) * 4) + oct] = (GLubyte) ( val * 255.0f);
-//            }
-//        }
-//    }
-
-//    glGenTextures(1, &m_perlinTex);
-//    glBindTexture(GL_TEXTURE_2D, m_perlinTex);
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-//    glBindTexture(GL_TEXTURE_2D, 0);
-
-//    delete [] data;
 }
 //-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::createGrid(){
@@ -291,7 +240,6 @@ void OceanGrid::createH0(){
             h_H0[((n+(m_resolution/2)) + ((m+(m_resolution/2)) * m_resolution))] = h;
         }
     }
-
     checkCudaErrors(cudaMemcpy(d_H0, h_H0, gridSize*sizeof(glm::vec2), cudaMemcpyHostToDevice));
 }
 //-------------------------------------------------------------------------------------------------------------------------
@@ -373,13 +321,15 @@ void OceanGrid::loadMatricesToShader(glm::mat4 _modelMatrix, glm::mat4 _viewMatr
 }
 //-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::update(){
-
     // Set the sea colours in the shader which can be set in the GUI
     glUniform3f(m_seaBaseColLoc, m_seaBaseColour.x, m_seaBaseColour.y, m_seaBaseColour.z);
     glUniform3f(m_seaTopColLoc, m_seaTopColour.x, m_seaTopColour.y, m_seaTopColour.z);
 
     // Set the direction of the sun
     glUniform3f(m_sunPositionLoc, m_sunPos.x, m_sunPos.y, m_sunPos.z);
+
+    // Sets the sun streak width
+    glUniform1f(m_sunStreakLoc, m_sunStreak);
 
     // The time of the simulation
     struct timeval tim;
@@ -488,5 +438,9 @@ void OceanGrid::setSeaBaseCol(QColor _col){
 //-------------------------------------------------------------------------------------------------------------------------
 void OceanGrid::setSeaTopCol(QColor _col){
     m_seaTopColour = make_float3(_col.red()/255.0, _col.green()/255.0, _col.blue()/255.0);
+}
+//-------------------------------------------------------------------------------------------------------------------------
+void OceanGrid::setSunStreakWidth(float _width){
+    m_sunStreak = _width;
 }
 //-------------------------------------------------------------------------------------------------------------------------

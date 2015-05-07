@@ -104,7 +104,7 @@ __global__ void calculateNormals(float3* d_position, float3* d_normals, int _res
 
     float3 norm = make_float3(0.0, 0.0, 0.0);
     float3 posL, posR, posD, posU;
-    // TODO remove branching conditions
+    /// @todo remove branching conditions
     if (((blockIdx.x * blockDim.x) + threadIdx.x) >= 1){
         posL = (d_position[((blockIdx.x * blockDim.x) + threadIdx.x) - 1]);
     }
@@ -130,7 +130,6 @@ __global__ void calculateNormals(float3* d_position, float3* d_normals, int _res
         posD = d_position[threadIdx.x];
     }
 
-
     float3 leftVec, rightVec, topVec, bottomVec;
     float3 centerVec = d_position[((blockIdx.x * blockDim.x) + threadIdx.x)];
     leftVec =  posL - centerVec;
@@ -141,11 +140,6 @@ __global__ void calculateNormals(float3* d_position, float3* d_normals, int _res
     topVec.y *= 100.0;
     bottomVec =  posD - centerVec;
     bottomVec.y *= 100.0;
-//    printf("leftVec %f, %f, %f\n ", leftVec.x, leftVec.y, leftVec.z);
-//    printf("rightVec %f, %f, %f\n ", rightVec.x, rightVec.y, rightVec.z);
-//    printf("topVec %f, %f, %f\n ", topVec.x, topVec.y, topVec.z);
-//    printf("bottomVec %f, %f, %f\n ", bottomVec.x, bottomVec.y, bottomVec.z);
-
 
     float3 tmpNorm1 = normalize(cross(leftVec, topVec));
     float3 tmpNorm2 = normalize(cross(topVec, rightVec));

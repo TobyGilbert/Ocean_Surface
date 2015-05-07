@@ -45,7 +45,7 @@ public:
     QPushButton *m_topColourBtn;
     QPushButton *m_baseColourBtn;
     QLabel *label_12;
-    QDoubleSpinBox *doubleSpinBox_4;
+    QDoubleSpinBox *m_sunStreakSpinBox;
     QGroupBox *groupBox_3;
     QGridLayout *gridLayout_5;
     QLabel *label;
@@ -115,10 +115,10 @@ public:
 
         gridLayout_6->addWidget(label_12, 3, 0, 1, 1);
 
-        doubleSpinBox_4 = new QDoubleSpinBox(groupBox_4);
-        doubleSpinBox_4->setObjectName(QStringLiteral("doubleSpinBox_4"));
+        m_sunStreakSpinBox = new QDoubleSpinBox(groupBox_4);
+        m_sunStreakSpinBox->setObjectName(QStringLiteral("m_sunStreakSpinBox"));
 
-        gridLayout_6->addWidget(doubleSpinBox_4, 3, 1, 1, 1);
+        gridLayout_6->addWidget(m_sunStreakSpinBox, 3, 1, 1, 1);
 
 
         gridLayout_2->addWidget(groupBox_4, 2, 0, 1, 1);
@@ -240,7 +240,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 893, 22));
+        menubar->setGeometry(QRect(0, 0, 893, 25));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -260,7 +260,7 @@ public:
         label_10->setText(QApplication::translate("MainWindow", "Ocean Base Colour", 0));
         m_topColourBtn->setText(QString());
         m_baseColourBtn->setText(QString());
-        label_12->setText(QApplication::translate("MainWindow", "Streak Width", 0));
+        label_12->setText(QApplication::translate("MainWindow", "Sun Streak Width", 0));
         groupBox_3->setTitle(QString());
         label->setText(QApplication::translate("MainWindow", "Simulation Time", 0));
         groupBox_2->setTitle(QApplication::translate("MainWindow", "Wave Options", 0));

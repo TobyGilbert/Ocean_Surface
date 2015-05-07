@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->setMinimumWidth(1000);
     ui->choppinessSlider->setMinimum(0);
     ui->choppinessSlider->setSliderPosition(5);
-    ui->choppinessSlider->setMaximum(100);
+    ui->choppinessSlider->setMaximum(20);
     ui->lineEdit->setText("0.05");
 
     // FPS and time output line edits
@@ -61,6 +61,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->m_baseColourBtn->setPalette(palette);
     ui->m_baseColourBtn->setAutoFillBackground(true);
 
+    // Sun streak width
+    ui->m_sunStreakSpinBox->setMaximum(10000.0);
+    ui->m_sunStreakSpinBox->setValue(200.0);
+
     connect(ui->m_xWindSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(updateWindDirX(double)));
     connect(ui->m_xWindSpinBox, SIGNAL(editingFinished()), m_openGLWidget, SLOT(resetSim()));
     connect(ui->m_zWindSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(updateWindDirY(double)));
@@ -75,7 +79,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->m_baseColourBtn, SIGNAL(clicked()), this, SLOT(changeSeaBaseColourBtn()));
     connect(ui->m_boatCheckBox, SIGNAL(clicked()), m_openGLWidget, SLOT(boatCheckBox()));
     connect(ui->m_skyboxCheckBox, SIGNAL(clicked()), m_openGLWidget, SLOT(skyboxCheckBox()));
-
+    connect(ui->m_sunStreakSpinBox, SIGNAL(valueChanged(double)), m_openGLWidget, SLOT(setSunStreakWidth(double)));
 }
 //-------------------------------------------------------------------------------------------------------------------------
 MainWindow::~MainWindow(){

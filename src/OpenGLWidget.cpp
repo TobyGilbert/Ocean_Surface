@@ -9,6 +9,7 @@
 //-------------------------------------------------------------------------------------------------------------------------
 const static float INCREMENT= 2.0;
 const static float ZOOM = 50;
+//-------------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidget(_format,_parent){
     // set this widget to have the initial keyboard focus
     setFocus();
@@ -20,8 +21,6 @@ OpenGLWidget::OpenGLWidget(const QGLFormat _format, QWidget *_parent) : QGLWidge
     m_spinYFace=0;
     // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
     this->resize(_parent->size());
-
-    m_sunPos = glm::vec3(0.0, 10.0, -50.0);
 }
 //----------------------------------------------------------------------------------------------------------------------
 OpenGLWidget::~OpenGLWidget(){
@@ -47,7 +46,6 @@ void OpenGLWidget::initializeGL(){
     // enable so we can use clipping in the shader
     glEnable(GL_CLIP_DISTANCE0);
 
-
     // as re-size is not explicitly called we need to do this.
     glViewport(0,0,width(),height());
 
@@ -65,12 +63,13 @@ void OpenGLWidget::initializeGL(){
     m_boat = new Boat("models/boat.obj", "textures/boat.jpg");
     m_renderBoat = false;
 
+    m_sunPos = glm::vec3(0.0, 10.0, -50.0);
+
     genFBOs();
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateGL()));
     timer->start(1000/30); // Update every 1/30sec
-
 }
 //-------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::genFBOs(){
@@ -96,9 +95,11 @@ void OpenGLWidget::resizeGL(const int _w, const int _h){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::renderReflections(){
+    // Reset the viewport to the size of the texture and render our reflected geometry
+    // scaled by (1, -1, 1)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glViewport(0, 0, 512, 512);
+    glViewport(0, 0, 1024, 1024);
 
     glm::mat4 rotx;
     glm::mat4 roty;
@@ -127,13 +128,13 @@ void OpenGLWidget::renderReflections(){
 }
 //----------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::paintGL(){
-
     // Set the sun Position
     m_oceanGrid->setSunPos(m_sunPos);
     m_skybox->setSunPos(m_sunPos);
 
     updateTimer(m_oceanGrid->getTime());
 
+    // Render the relfections to a texture
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectFBO);
     renderReflections();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -225,15 +226,13 @@ void OpenGLWidget::mousePressEvent ( QMouseEvent * _event){
     // Sourced from Jon Macey's NGL library
     // this method is called when the mouse button is pressed in this case we
     // store the value where the mouse was clicked (x,y) and set the Rotate flag to true
-    if(_event->button() == Qt::LeftButton)
-    {
+    if(_event->button() == Qt::LeftButton){
         m_origX = _event->x();
         m_origY = _event->y();
         m_rotate = true;
     }
     // right mouse translate mode
-    else if(_event->button() == Qt::RightButton)
-    {
+    else if(_event->button() == Qt::RightButton){
         m_origXPos = _event->x();
         m_origYPos = _event->y();
         m_translate = true;
@@ -242,28 +241,24 @@ void OpenGLWidget::mousePressEvent ( QMouseEvent * _event){
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::mouseReleaseEvent ( QMouseEvent * _event ){
     // Sourced from Jon Macey's NGL library
-  // this event is called when the mouse button is released
-  // we then set Rotate to false
-  if (_event->button() == Qt::LeftButton)
-  {
-    m_rotate=false;
-  }
+    // this event is called when the mouse button is released
+    // we then set Rotate to false
+    if (_event->button() == Qt::LeftButton){
+        m_rotate=false;
+    }
         // right mouse translate mode
-  if (_event->button() == Qt::RightButton)
-  {
-    m_translate=false;
-  }
+    if (_event->button() == Qt::RightButton){
+        m_translate=false;
+    }
 }
 //------------------------------------------------------------------------------------------------------------------------------------
 void OpenGLWidget::wheelEvent(QWheelEvent *_event){
     // Sourced from Jon Macey's NGL library
     // check the diff of the wheel position (0 means no change)
-    if(_event->delta() > 0)
-    {
+    if(_event->delta() > 0){
         m_modelPos.z+=ZOOM;
     }
-    else if(_event->delta() <0 )
-    {
+    else if(_event->delta() <0 ){
         m_modelPos.z-=ZOOM;
     }
 }
@@ -311,7 +306,6 @@ void OpenGLWidget::updateTopColour(QColor _colour){
     m_oceanGrid->setSeaTopCol(_colour);
 }
 //----------------------------------------------------------------------------------------------------------------------
-// Bad way to do this should be improved!!
 float3 OpenGLWidget::getSeaTopColour(){
     return m_oceanGrid->getSeaTopColour();
 }
@@ -336,5 +330,9 @@ void OpenGLWidget::skyboxCheckBox(){
     else{
         m_renderSkyBox = true;
     }
+}
+//----------------------------------------------------------------------------------------------------------------------
+void OpenGLWidget::setSunStreakWidth(double _width){
+    m_oceanGrid->setSunStreakWidth(_width);
 }
 //----------------------------------------------------------------------------------------------------------------------
