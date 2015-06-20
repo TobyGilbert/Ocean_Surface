@@ -194,11 +194,12 @@ void OpenGLWidget::paintGL(){
         m_skybox->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
         m_skybox->render();
     }
-
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     m_modelMatrix = m_mouseGlobalTX;
     m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0, -20.0, 0.0));
     m_oceanGrid->loadMatricesToShader(m_modelMatrix, m_cam->getViewMatrix(), m_cam->getProjectionMatrix());
     m_oceanGrid->render();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     if(m_renderBoat){
         m_modelMatrix= m_mouseGlobalTX;
